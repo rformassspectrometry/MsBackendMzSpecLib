@@ -1,0 +1,35 @@
+Package: MsBackendMzSpecLib
+Title: MS Data Backend for mzSpecLib Data Files
+Version: 0.97.0
+Authors@R:
+    c(person(given = "Gabriele", family = "Tomè",
+             email = "gabriele.tome@eurac.edu",
+             role = c("aut"),
+             comment = c(ORCID = "0000-0002-3976-6068",
+             fnd = "MetaRbolomics4Galaxy project (CUP: D53C25001030003) co-funded by the Autonomous Province of Bolzano under the Joint Projects South Tyrol–Germany 2025 program.")),
+      person(given = "Johannes", family = "Rainer",
+             email = "Johannes.Rainer@eurac.edu",
+             role = c("aut", "cre"),
+             comment = c(ORCID = "0000-0002-6977-7147")))
+Description: The HUPO-PSI mzSpecLib format is a standardized file format to
+             distribute mass spectral (MS) libraries and archives. The Spectra
+             R package represents the core infrastructure for MS data analysis
+             in Biocondcutor. The MzBackendMzSpecLib package provides
+             functionality to read and write mzSpecLib files and defines data
+             backends enabling import and export of these files to and from
+             Spectra objects.
+Depends:
+    R (>= 4.6.0)
+Imports:
+    MetaboCoreUtils (>= 1.21.2),
+    Spectra,
+    methods
+Suggests:
+    testthat
+License: Artistic-2.0
+Encoding: UTF-8
+BugReports: https://github.com/RforMassSpectrometry/MsBackendMzSpecLib/issues
+URL: https://github.com/RforMassSpectrometry/MsBackendMzSpecLib
+biocViews: Infrastructure, MassSpectrometry, Metabolomics, DataImport, Proteomics
+Roxygen: list(markdown=TRUE)
+Config/roxygen2/version: 8.1.1
