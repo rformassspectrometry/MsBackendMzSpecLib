@@ -4,16 +4,33 @@
 \name{MsBackendMzSpecLib}
 \alias{MsBackendMzSpecLib}
 \alias{spectraVariableMapping,MsBackendMzSpecLib-method}
+\alias{backendInitialize,MsBackendMzSpecLib-method}
+\alias{show,MsBackendMzSpecLib-method}
+\alias{length,MsBackendMzSpecLib-method}
 \title{MsBackend for mzSpecLib files}
 \usage{
 MsBackendMzSpecLib()
 
 \S4method{spectraVariableMapping}{MsBackendMzSpecLib}(object, ...)
+
+\S4method{backendInitialize}{MsBackendMzSpecLib}(object, files, ..., BPPARAM = bpparam())
+
+\S4method{show}{MsBackendMzSpecLib}(object)
+
+\S4method{length}{MsBackendMzSpecLib}(x)
 }
 \arguments{
 \item{object}{A \code{MsBackendMzSpecLib} object}
 
 \item{...}{For \code{spectraVariableMapping()}: ignored.}
+
+\item{files}{\code{character} specifying mzSpecLib file names.}
+
+\item{BPPARAM}{Parameter object defining the parallel processing
+setup to import data in parallel. Defaults to \code{BPPARAM = bpparam()}.
+See \code{\link[BiocParallel:bpparam]{BiocParallel::bpparam()}} for more information.}
+
+\item{x}{A \code{MsBackendMzSpecLib} object}
 }
 \description{
 The \code{MsBackendMzSpecLib} \link[Spectra:MsBackend]{Spectra::MsBackend} backend provides an interface
@@ -32,10 +49,41 @@ spectra variable names can be listed by the
 for more information on spectra attributes and the names and details for
 the individual controlled vocabulary (CV) terms.
 }
+\section{Available methods}{
+
+
+The methods listed below are specifically implemented for
+\code{MsBackendMzSpecLib}. The backend inherits and thus supports all other
+methods from the \link[Spectra:MsBackend]{Spectra::MsBackend} class.
+\itemize{
+\item \code{backendInitialize()}: initializes \code{object} (the \code{MsBackendMzSpecLib}
+object) using mzSpecLib data files whose path is specified by \code{files}.
+This method is supposed to be called right after creating a
+\code{MsBackendMzSpecLib} object with \code{MsBackendMzSpecLib()} function.
+\item \code{spectraVariables()}: returns a \code{character} vector with the spectra
+variables names of core spectra variables defined in the Spectra package
+and other additional variables contained in \code{object}.
+Note that also \code{"mz"} and \code{"intensity"} (which are by default not returned
+by the \verb{spectraVariables,Spectra} method) are returned.
+}
+}
+
 \examples{
 
 ## List the mapping of spectra variables and mzSpecLib spectrum attributes
 spectraVariableMapping(MsBackendMzSpecLib())
+
+fl <- system.file("examples", "fetal_brain_tiny.mzspeclib.txt",
+                 package = "MsBackendMzSpecLib")
+
+## Create a MsBackend instance for that file
+be <- backendInitialize(MsBackendMzSpecLib(), fl)
+be
+
+}
+\seealso{
+The HUPO-PSI mzSpecLib specification,
+\url{https://www.psidev.info/mzspeclib}.
 }
 \author{
 Johannes Rainer, Gabriele Tomè

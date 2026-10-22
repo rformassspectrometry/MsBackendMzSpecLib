@@ -45,6 +45,8 @@
 #'
 #' @param object A `MsBackendMzSpecLib` object
 #'
+#' @param x A `MsBackendMzSpecLib` object
+#'
 #' @param ... For `spectraVariableMapping()`: ignored.
 #'
 #' @author Johannes Rainer, Gabriele Tomè
@@ -57,7 +59,7 @@
 #' ## List the mapping of spectra variables and mzSpecLib spectrum attributes
 #' spectraVariableMapping(MsBackendMzSpecLib())
 #'
-#' fl <- system.file("examples", "fetal_brain_tiny_mzspeclib.txt",
+#' fl <- system.file("examples", "fetal_brain_tiny.mzspeclib.txt",
 #'                  package = "MsBackendMzSpecLib")
 #'
 #' ## Create a MsBackend instance for that file
@@ -105,11 +107,13 @@ setValidity("MsBackendMzSpecLib", function(object) {
     else TRUE
 })
 
+#' @importMethodsFrom Spectra backendInitialize
+#'
 #' @rdname MsBackendMzSpecLib
 #'
 #' @importFrom methods callNextMethod
 #'
-#' @exportMethod backendInitialize
+#' @export
 setMethod("backendInitialize", "MsBackendMzSpecLib",
           function(object, files, ..., BPPARAM = bpparam()) {
     if (missing(files))
@@ -134,9 +138,7 @@ setMethod("backendInitialize", "MsBackendMzSpecLib",
 
 #' @rdname MsBackendMzSpecLib
 #'
-#' @importFrom methods callNextMethod
-#'
-#' @exportMethod show
+#' @importFrom methods show
 setMethod("show", "MsBackendMzSpecLib", function(object) {
     nm  <- .header_value(object@header, "MS:1003188") ## library name
     ver <- .header_value(object@header, "MS:1003190") ## library version

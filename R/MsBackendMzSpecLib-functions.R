@@ -6,6 +6,7 @@
 MsBackendMzSpecLib <- function() {
     new("MsBackendMzSpecLib")
 }
+
 #' @title Initialize MsBackendMzSpecLib object
 #'
 #' @description
@@ -67,7 +68,7 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @param path `character(1)` path to the mzSpecLib file.
 #'
-#' @param chunk_bytes `numeric(1)` bytes read per chunk.
+#' @param chunk_lines `numeric(1)` bytes read per chunk.
 #'
 #' @return `data.frame` with one row per tag and columns `tag`, `kind`,
 #'     `attrset`, `key`, `start`, `end`, `peak_line`.
@@ -92,7 +93,7 @@ MsBackendMzSpecLib <- function() {
     info <- .parse_attributeset_tag(idx$tag)
     df <- data.frame(tag = idx$tag, kind = info$kind, attrset = info$attrset,
                 key = info$key, start = idx$line,
-                end = c(idx$line[-1L] - 1L, Inf), peak_line = NA)
+                end = c(idx$line[-1L], Inf), peak_line = NA)
     df[df$kind == "Spectrum" & !df$attrset, ]$peak_line <- peaks_pos$line
     df
 }
