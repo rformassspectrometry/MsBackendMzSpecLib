@@ -37,6 +37,18 @@
 #'   Note that also `"mz"` and `"intensity"` (which are by default not returned
 #'   by the `spectraVariables,Spectra` method) are returned.
 #'
+#' @details
+#' The `MsBackendMzSpecLib` is composed of three elements:
+#' - `fileNames`: `character` vector with the associated files;
+#' - `index`: `data.frame` with basic information for each section in the
+#'   file. For each tag, it reports which tag it is, whether it is an
+#'   AttributeSet tag, and its identifier key (if present), along with the
+#'   start and end positions in the file and, if it is a spectrum, the start of
+#'   the peak subsection;
+#' - `header`: `data.frame` with the first parsed section of the file
+#'   containing the file metadata.
+#'
+#'
 #' @param BPPARAM Parameter object defining the parallel processing
 #'   setup to import data in parallel. Defaults to `BPPARAM = bpparam()`.
 #'   See [BiocParallel::bpparam()] for more information.

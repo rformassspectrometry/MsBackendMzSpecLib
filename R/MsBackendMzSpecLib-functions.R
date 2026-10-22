@@ -70,8 +70,17 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @param chunk_lines `numeric(1)` bytes read per chunk.
 #'
-#' @return `data.frame` with one row per tag and columns `tag`, `kind`,
-#'     `attrset`, `key`, `start`, `end`, `peak_line`.
+#' @return `data.frame` with one row per tag and columns:
+#'     - `tag`: Original tags detected in the file (e.g.,
+#'           `"<AttributeSet Spectrum=1>"`).
+#'     - `kind`: The type of tag detected (e.g., `"Spectrum"`).
+#'     - `attrset`: `logical` indicating whether the field is an
+#'           `"AttributeSet"`.
+#'     - `key`: Key extracted from the tag, or `NA` if absent (e.g., `"1"`).
+#'     - `start`: Line position where the section starts.
+#'     - `end`: Line position where the section ends.
+#'     - `peak_line`: Line position where the peak section starts if it is a
+#'           spectrum section; `NA` otherwise.
 #'
 #' @importFrom readr read_lines_chunked DataFrameCallback
 #'
@@ -126,8 +135,12 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @param body `character` with the lines of a section.
 #'
-#' @return `data.frame` with columns `group` (`integer`), `accession`,
-#'     `name` and `value` (`character`).
+#' @return `data.frame` with columns:
+#'     - `group`:  `integer` with the ID of the group; if not present
+#'           `NA_integer_`,
+#'     - `accession`: ID of the CV term (e.g. `"MS:1003188"`),
+#'     - `name`: name of the CV term (e.g. `"library name"`)
+#'     - `value`: `character` with the value of the CV term.
 #'
 #' @noRd
 .parse_attributes <- function(body) {
