@@ -1,3 +1,11 @@
+#' @importFrom methods new
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @export
+MsBackendMzSpecLib <- function() {
+    new("MsBackendMzSpecLib")
+}
 #' @title Initialize MsBackendMzSpecLib object
 #'
 #' @description
