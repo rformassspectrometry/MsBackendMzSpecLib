@@ -27,7 +27,7 @@ All spectra and analyte metadata information from the mzSpecLib file(s) are
 available as \code{\link[Spectra:spectraVariables]{Spectra::spectraVariables()}} in the \code{Spectra} object. The
 mapping of the spectra attribute names (controlled vocabulary terms) to
 spectra variable names can be listed by the
-\code{spectraVariableMapping(MsBackendMgf())} function. See also the
+\code{spectraVariableMapping(MsBackendMzSpecLib())} function. See also the
 \href{https://hupo-psi.github.io/mzSpecLib/specification/metadata.html}{mzSpecLib documentation}
 for more information on spectra attributes and the names and details for
 the individual controlled vocabulary (CV) terms.

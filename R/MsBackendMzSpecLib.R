@@ -15,7 +15,7 @@
 #' available as [Spectra::spectraVariables()] in the `Spectra` object. The
 #' mapping of the spectra attribute names (controlled vocabulary terms) to
 #' spectra variable names can be listed by the
-#' `spectraVariableMapping(MsBackendMgf())` function. See also the
+#' `spectraVariableMapping(MsBackendMzSpecLib())` function. See also the
 #' [mzSpecLib documentation](https://hupo-psi.github.io/mzSpecLib/specification/metadata.html)
 #' for more information on spectra attributes and the names and details for
 #' the individual controlled vocabulary (CV) terms.

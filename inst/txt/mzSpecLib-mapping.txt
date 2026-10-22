@@ -53,7 +53,7 @@
 "MS:1002875"	"inverse reduced ion mobility"	"numeric"	FALSE	"spectrum"	"may"	1	"inverse_reduced_ion_mobility"
 "MS:1002954"	"collision cross sectional area"	"numeric"	FALSE	"spectrum"	"may"	1	"collision_cross_sectional_area"
 "MS:1001581"	"FAIMS compensation voltage"	"numeric"	FALSE	"spectrum"	"may"	1	"faims_compensation_voltage"
-"MS:1000465"	"scan polarity"	"character"	FALSE	"spectrum"	"may"	1	"scan_polarity"
+"MS:1000465"	"scan polarity"	"character"	FALSE	"spectrum"	"may"	1	"polarity"
 "MS:1000512"	"filter string"	"character"	FALSE	"spectrum"	"may"	1	"filter_string"
 "MS:1000011"	"mass resolution"	"character"	FALSE	"spectrum"	"may"	1	"mass_resolution"
 "MS:1000800"	"mass resolving power"	"character"	FALSE	"spectrum"	"may"	1	"mass_resolving_power"
