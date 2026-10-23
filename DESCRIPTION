@@ -1,6 +1,6 @@
 Package: MsBackendMzSpecLib
 Title: MS Data Backend for mzSpecLib Data Files
-Version: 0.97.0
+Version: 0.97.1
 Authors@R:
     c(person(given = "Gabriele", family = "Tomè",
              email = "gabriele.tome@eurac.edu",
@@ -23,7 +23,10 @@ Depends:
 Imports:
     MetaboCoreUtils (>= 1.21.2),
     Spectra,
-    methods
+    methods,
+    BiocParallel,
+    readr,
+    stringr
 Suggests:
     testthat
 License: Artistic-2.0
