@@ -26,7 +26,9 @@ Imports:
     methods,
     BiocParallel,
     readr,
-    stringr
+    stringr,
+    dplyr,
+    IRanges
 Suggests:
     testthat
 License: Artistic-2.0

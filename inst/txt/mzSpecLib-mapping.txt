@@ -60,7 +60,7 @@
 "MS:1003086"	"precursor apex intensity"	"numeric"	FALSE	"spectrum"	"may"	1	"precursor_apex_intensity"
 "MS:1003085"	"previous MSn-1 scan precursor intensity"	"numeric"	FALSE	"spectrum"	"may"	1	"precursorIntensity"
 "MS:1000633"	"possible charge state"	"integer"	FALSE	"spectrum"	"may"	1	"possible_charge_state"
-"MS:1000041"	"charge state"	"integer"	FALSE	"spectrum|analyte"	"may"	1	"charge_state"
+"MS:1000041"	"charge state"	"integer"	FALSE	"spectrum|analyte"	"may"	1	"precursorCharge"
 "MS:1003059"	"number of peaks"	"integer"	FALSE	"spectrum"	"may"	1	"peaksCount"
 "MS:1003060"	"number of data points"	"integer"	FALSE	"spectrum"	"may"	1	"number_of_data_points"
 "MS:1000034"	"intensity unit"	"character"	FALSE	"spectrum"	"may"	1	"intensity_unit"

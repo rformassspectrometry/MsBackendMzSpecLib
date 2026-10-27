@@ -3,13 +3,19 @@
 %   R/MsBackendMzSpecLib.R
 \name{MsBackendMzSpecLib}
 \alias{MsBackendMzSpecLib}
+\alias{spectraVariables,MsBackendMzSpecLib-method}
 \alias{spectraVariableMapping,MsBackendMzSpecLib-method}
 \alias{backendInitialize,MsBackendMzSpecLib-method}
 \alias{show,MsBackendMzSpecLib-method}
 \alias{length,MsBackendMzSpecLib-method}
+\alias{spectraData,MsBackendMzSpecLib-method}
+\alias{peaksData,MsBackendMzSpecLib-method}
+\alias{peaksVariables,MsBackendMzSpecLib-method}
 \title{MsBackend for mzSpecLib files}
 \usage{
 MsBackendMzSpecLib()
+
+\S4method{spectraVariables}{MsBackendMzSpecLib}(object, ...)
 
 \S4method{spectraVariableMapping}{MsBackendMzSpecLib}(object, ...)
 
@@ -18,6 +24,12 @@ MsBackendMzSpecLib()
 \S4method{show}{MsBackendMzSpecLib}(object)
 
 \S4method{length}{MsBackendMzSpecLib}(x)
+
+\S4method{spectraData}{MsBackendMzSpecLib}(object, columns = spectraVariables(object), BPPARAM = bpparam())
+
+\S4method{peaksData}{MsBackendMzSpecLib}(object, columns = c("mz", "intensity"), BPPARAM = bpparam())
+
+\S4method{peaksVariables}{MsBackendMzSpecLib}(object, index = NULL, ...)
 }
 \arguments{
 \item{object}{A \code{MsBackendMzSpecLib} object}
@@ -49,6 +61,19 @@ spectra variable names can be listed by the
 for more information on spectra attributes and the names and details for
 the individual controlled vocabulary (CV) terms.
 }
+\details{
+The \code{MsBackendMzSpecLib} is composed of three elements:
+\itemize{
+\item \code{fileNames}: \code{character} vector with the associated files;
+\item \code{index}: \code{data.frame} with basic information for each section in the
+file. For each tag, it reports which tag it is, whether it is an
+AttributeSet tag, and its identifier key (if present), along with the
+start and end positions in the file and, if it is a spectrum, the start of
+the peak subsection;
+\item \code{header}: \code{data.frame} with the first parsed section of the file
+containing the file metadata.
+}
+}
 \section{Available methods}{
 
 
@@ -79,6 +104,10 @@ fl <- system.file("examples", "fetal_brain_tiny.mzspeclib.txt",
 ## Create a MsBackend instance for that file
 be <- backendInitialize(MsBackendMzSpecLib(), fl)
 be
+
+spectraData <- spectraData(be)
+
+peaksData <- peaksData(be)
 
 }
 \seealso{
