@@ -123,8 +123,8 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @noRd
 .read_block <- function(path, start, end) {
-    if (end-start-1 > 0) {
-        body <- read_lines(path, skip = start, n_max = end-start-1,
+    if (end-start > 0) {
+        body <- read_lines(path, skip = start, n_max = end-start,
                             progress = FALSE)
         body[nzchar(body)]
     } else
@@ -205,7 +205,7 @@ MsBackendMzSpecLib <- function() {
 .spectrum_variables <- function(scanIndex, lines, mtd_all_spectrum) {
     mtd <- .merge_spectrum_mtd_section(scanIndex, lines, mtd_all_spectrum)
     ## Aggregate optional columns of peaks table in a single row
-    if(length(val <- .header_value(mtd, "MS:1003254"))){
+    if(!all(is.na(val <- .header_value(mtd, "MS:1003254")))){
         mtd <- rbind(mtd[mtd$accession != "MS:1003254", ],
                     data.frame(group = NA, accession = "MS:1003254",
                         name = "peak attribute",
@@ -239,6 +239,9 @@ MsBackendMzSpecLib <- function() {
                 spectra_Data$isolationWindowTargetMz +
                     spectra_Data$isolationWindowUpperOffset
 
+    if ("peak_attribute" %in% names(spectra_Data))
+        spectra_Data[spectra_Data$peak_attribute == "NA",
+                        "peak_attribute"] <- NA
     # DataStorage, dataorigin == path file
     # Mz = NumericList
     # Intensity = NumericList
@@ -261,6 +264,7 @@ MsBackendMzSpecLib <- function() {
 #' @noRd
 .merge_spectrum_mtd_section <- function(scanIndex, lines, mtd_all_spectrum){
     parts <- .split_by_tags(lines, .SPECTRUM_SECTION)
+    parts <- Filter(length, parts)
     mtd_spectrum <- .parse_attributes(parts[["Metadata"]])
     mtd_spectrum$spectra_variable <-
                 spectraVariableFromCvTerm(mtd_spectrum$accession)
@@ -281,7 +285,7 @@ MsBackendMzSpecLib <- function() {
         mtd_spectrum <- rbind(mtd_spectrum, mtd_global)
     }
     ## Parse other attribute: MS:1003275, MS:1003276
-    if (length(.header_value(mtd_spectrum, "MS:1003275"))){
+    if (!all(is.na(.header_value(mtd_spectrum, "MS:1003275")))){
         mtd_spectrum <- .parse_other_attributes(mtd_spectrum)
     }
     ## Filter not allowed repeated fields
@@ -315,9 +319,9 @@ MsBackendMzSpecLib <- function() {
 #' @noRd
 .polarity <- function(v) {
     if (!is.na(v)) {
-        if (grep("MS:1000130", v))
+        if (grepl("MS:1000130", v))
             return(1L)
-        else if (grep("MS:1000129", v))
+        else if (grepl("MS:1000129", v))
             return(0L)
     }
     return(-1L)
@@ -328,9 +332,9 @@ MsBackendMzSpecLib <- function() {
 #' @noRd
 .spectrum_representation <- function(v){
     if (!is.na(v)) {
-        if (grep("MS:1000127", v))
+        if (grepl("MS:1000127", v))
             return(TRUE)
-        else if (grep("MS:1000128", v))
+        else if (grepl("MS:1000128", v))
             return(FALSE)
     }
     return(NA)
@@ -401,13 +405,15 @@ convert_value <- function(x, type) {
 #'
 #' @return `data.frame` with the peaks, where `mz` and `intensity` are numeric.
 #'
+#' @importFrom utils read.delim2
+#'
 #' @noRd
 .peaks_table <- function(s, fileNames, idx, columns) {
     ## Suppress warning since the spectrum can have different number of columns
     ## Read empty columns to merge later
     spectra_idx <- idx[which(idx$key == s), ]
     peaks_data <- suppressWarnings(read.delim2(text = .read_block(fileNames,
-                        spectra_idx$peak_line, spectra_idx$end),
+                        spectra_idx$peak_line-1, spectra_idx$end-1),
                         sep = "\t", col.names = columns))
     peaks_data$mz <- as.numeric(peaks_data$mz)
     peaks_data$intensity <- as.numeric(peaks_data$intensity)

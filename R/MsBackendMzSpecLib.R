@@ -31,6 +31,19 @@
 #'   This method is supposed to be called right after creating a
 #'   `MsBackendMzSpecLib` object with `MsBackendMzSpecLib()` function.
 #'
+#' - `peaksData()`: gets the peak matrices of the spectra in the backend.
+#'   Returns a `list` of `data.frame` with columns defined by parameter
+#'   `columns` (which defaults to `columns = c("mz", "intensity")`. Use
+#'   `peaksVariables()` to list all supported and available columns for a
+#'   backend. The length of the `list` is equal to the number of spectra in
+#'   `object`.
+#'
+#' - `peaksVariables()`: gets the supported peak variables (columns) for the
+#'   backend.
+#'
+#' - `spectraData()`: gets spectra variables (specified by `columns`) from
+#'   `object`.
+#'
 #' - `spectraVariables()`: returns a `character` vector with the spectra
 #'   variables names of core spectra variables defined in the Spectra package
 #'   and other additional variables contained in `object`.
@@ -53,7 +66,14 @@
 #'   setup to import data in parallel. Defaults to `BPPARAM = bpparam()`.
 #'   See [BiocParallel::bpparam()] for more information.
 #'
+#' @param columns For `spectraData()`: names of the spectra variables to extract
+#'   from `object`. For `peaksData()`: names of the peak variables to extract.
+#'   Defaults to `columns = c("mz", "intensity")`.
+#'
 #' @param files `character` specifying mzSpecLib file names.
+#'
+#' @param index `integer(1)` For `peaksVariables()`: index of the desired
+#'     spectrum.
 #'
 #' @param object A `MsBackendMzSpecLib` object
 #'
@@ -79,8 +99,10 @@
 #' be
 #'
 #' spectraData <- spectraData(be)
+#' head(spectraData)
 #'
 #' peaksData <- peaksData(be)
+#' head(peaksData[[1]][[1]])
 #'
 NULL
 
@@ -229,7 +251,7 @@ setMethod("spectraData", "MsBackendMzSpecLib",
                 }), fill = TRUE)
             spectra_Data$dataOrigin <- basename(object@fileNames[f_i])
             spectra_Data$dataStorage <- object@fileNames[f_i]
-            ## TODO: export optional columns?
+            ## TODO: export optional columns by default?
             cols <- intersect(columns, names(spectra_Data))
             spectra_Data[cols]
         }, BPPARAM = BPPARAM)
@@ -256,11 +278,13 @@ setMethod("peaksData", "MsBackendMzSpecLib",
                 idx <- idx_tbl[idx_tbl$file == f_i, ]
                 spectrum <- which(!idx$attrset & idx$kind == "Spectrum")
                 peaks_data <- bplapply(spectrum, function(s) {
-                    p_tbl <- .peaks_table(as.character(idx$key[s]),
-                                            object@fileNames[f_i], idx,
-                                            peaksVariables(object, s))
+                    p_tbl <- .peaks_table(idx$key[s],
+                                        object@fileNames[f_i], idx,
+                                        peaksVariables(object,
+                                                    as.integer(idx$key[s])))
                     p_tbl[make.names(intersect(columns,
-                                                peaksVariables(object, s)))]
+                                        peaksVariables(object,
+                                                    as.integer(idx$key[s]))))]
                 }, BPPARAM = BPPARAM)
                 peaks_data
             })
@@ -271,17 +295,23 @@ setMethod("peaksData", "MsBackendMzSpecLib",
 #'
 #' @rdname MsBackendMzSpecLib
 #'
+#' @importFrom stats na.omit
+#'
 #' @export
 setMethod("peaksVariables", "MsBackendMzSpecLib",
         function(object, index = NULL, ...) {
             opt_columns <- spectraData(object, "peak_attribute")
-            if (!is.null(index))
-                opt_columns <- opt_columns[object@index$key[index], ]
-            if (!is.null(opt_columns))
+            if (nrow(opt_columns)){
+                if (!is.null(index))
+                    opt_columns <- if (all(!is.na(opt_columns[index, ])))
+                                        opt_columns[index, ]
+                                    else .BASE_PEAK_COLS
+                else
+                    opt_columns <- na.omit(opt_columns)
                 unique(unlist(lapply(opt_columns, function(o){
                     c(.BASE_PEAK_COLS, strsplit(o, "&&"))
                 })))
-            else
+            } else{
                 .BASE_PEAK_COLS
-
+            }
         })

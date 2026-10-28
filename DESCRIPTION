@@ -1,6 +1,6 @@
 Package: MsBackendMzSpecLib
 Title: MS Data Backend for mzSpecLib Data Files
-Version: 0.97.1
+Version: 0.97.2
 Authors@R:
     c(person(given = "Gabriele", family = "Tomè",
              email = "gabriele.tome@eurac.edu",
@@ -30,7 +30,8 @@ Imports:
     dplyr,
     IRanges
 Suggests:
-    testthat
+    testthat,
+    callr
 License: Artistic-2.0
 Encoding: UTF-8
 BugReports: https://github.com/RforMassSpectrometry/MsBackendMzSpecLib/issues

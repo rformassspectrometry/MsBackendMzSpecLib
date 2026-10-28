@@ -2,6 +2,12 @@
 
 ## Changes in 0.97.1
 
+- Add Spectra methods: `spectraData()`, `peaksData()`, `peaksVariables()`,
+  `spectraVariables()`
+- Add tests and docs.
+
+## Changes in 0.97.1
+
 - Add base function to open MzSpecLib and indexing.
 
 ## Changes in 0.97.0

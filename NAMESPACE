@@ -33,8 +33,12 @@ importFrom(readr,
   read_lines,
   read_lines_chunked
 )
-importFrom(stats,setNames)
+importFrom(stats,
+  na.omit,
+  setNames
+)
 importFrom(stringr,str_match)
+importFrom(utils,read.delim2)
 importMethodsFrom(Spectra,backendInitialize)
 importMethodsFrom(Spectra,peaksData)
 importMethodsFrom(Spectra,peaksVariables)

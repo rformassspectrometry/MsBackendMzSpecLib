@@ -43,6 +43,13 @@ setup to import data in parallel. Defaults to \code{BPPARAM = bpparam()}.
 See \code{\link[BiocParallel:bpparam]{BiocParallel::bpparam()}} for more information.}
 
 \item{x}{A \code{MsBackendMzSpecLib} object}
+
+\item{columns}{For \code{spectraData()}: names of the spectra variables to extract
+from \code{object}. For \code{peaksData()}: names of the peak variables to extract.
+Defaults to \code{columns = c("mz", "intensity")}.}
+
+\item{index}{\code{integer(1)} For \code{peaksVariables()}: index of the desired
+spectrum.}
 }
 \description{
 The \code{MsBackendMzSpecLib} \link[Spectra:MsBackend]{Spectra::MsBackend} backend provides an interface
@@ -85,6 +92,16 @@ methods from the \link[Spectra:MsBackend]{Spectra::MsBackend} class.
 object) using mzSpecLib data files whose path is specified by \code{files}.
 This method is supposed to be called right after creating a
 \code{MsBackendMzSpecLib} object with \code{MsBackendMzSpecLib()} function.
+\item \code{peaksData()}: gets the peak matrices of the spectra in the backend.
+Returns a \code{list} of \code{data.frame} with columns defined by parameter
+\code{columns} (which defaults to \code{columns = c("mz", "intensity")}. Use
+\code{peaksVariables()} to list all supported and available columns for a
+backend. The length of the \code{list} is equal to the number of spectra in
+\code{object}.
+\item \code{peaksVariables()}: gets the supported peak variables (columns) for the
+backend.
+\item \code{spectraData()}: gets spectra variables (specified by \code{columns}) from
+\code{object}.
 \item \code{spectraVariables()}: returns a \code{character} vector with the spectra
 variables names of core spectra variables defined in the Spectra package
 and other additional variables contained in \code{object}.
@@ -106,8 +123,10 @@ be <- backendInitialize(MsBackendMzSpecLib(), fl)
 be
 
 spectraData <- spectraData(be)
+head(spectraData)
 
 peaksData <- peaksData(be)
+head(peaksData[[1]][[1]])
 
 }
 \seealso{
