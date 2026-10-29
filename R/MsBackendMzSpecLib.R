@@ -300,18 +300,13 @@ setMethod("peaksData", "MsBackendMzSpecLib",
 #' @export
 setMethod("peaksVariables", "MsBackendMzSpecLib",
         function(object, index = NULL, ...) {
-            opt_columns <- spectraData(object, "peak_attribute")
-            if (nrow(opt_columns)){
-                if (!is.null(index))
-                    opt_columns <- if (all(!is.na(opt_columns[index, ])))
-                                        opt_columns[index, ]
-                                    else .BASE_PEAK_COLS
-                else
-                    opt_columns <- na.omit(opt_columns)
-                unique(unlist(lapply(opt_columns, function(o){
-                    c(.BASE_PEAK_COLS, strsplit(o, "&&"))
-                })))
-            } else{
-                .BASE_PEAK_COLS
+            attrs <- as.character(
+                  spectraData(object, "peak_attribute")[["peak_attribute"]])
+            if (!is.null(index)) {
+                attrs <- attrs[index]
+                if (anyNA(attrs))
+                    attrs <- character()
             }
+            attrs <- attrs[!is.na(attrs)]
+            unique(c(.BASE_PEAK_COLS, unlist(strsplit(attrs, "&&"))))
         })
