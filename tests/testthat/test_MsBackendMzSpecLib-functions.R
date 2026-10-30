@@ -35,10 +35,10 @@ test_that(".open_mzspeclib() works", {
 
     ## Open example file
     res_test <- .open_mzspeclib(1, test_file)
-    expect_equal(nrow(res_test$index), 24L)
-    expect_equal(nrow(res_test$header), 12L)
+    expect_equal(nrow(res_test$index), 14L)
+    expect_equal(nrow(res_test$header), 15L)
     expect_equal(.header_value(res_test$header, "MS:1003188"),
-                     "fetal_brain_tiny")
+                     "fetal_brain_tiny_consensus_td")
 })
 
 test_that(".index_sections() works", {
@@ -66,12 +66,12 @@ test_that(".index_sections() works", {
 })
 
 test_that(".read_block() works", {
-    expect_equal(.read_block(small_file, 1, 5),
+    expect_equal(.read_block(small_file, 1, 4),
                 c("MS:1003186|library format version=1.0",
                 "MS:1003188|library name=mini",
                 "[1]MS:1003207|library creation software=MS:1001477|SpectraST"))
 
-    res <- .read_block(small_file, 5, 7)
+    res <- .read_block(small_file, 5, 6)
     expect_equal(res, "MS:1000511|ms level=2")
 
     expect_null(.read_block(small_file, 6, 6))
@@ -155,4 +155,200 @@ test_that(".parse_attributeset_tag() works", {
     expect_equal(res$attrset, c(FALSE, FALSE))
     expect_true(all(is.na(res$kind)))
     expect_true(all(is.na(res$key)))
+})
+
+test_that(".spectrum_variables works", {
+    be_test <- backendInitialize(MsBackendMzSpecLib(), small_file_opt)
+    idx <- be_test@index
+    rows <- which(idx$attrset & idx$kind == "Spectrum")
+    global_mtd <- setNames(lapply(rows, function(j)
+        .parse_attributes(.read_block(be_test@fileNames[1], idx$start[j],
+                                      idx$end[j]))),
+        idx$key[rows])
+
+    ## Spectrum 1
+    sv <- .spectrum_variables(1L, .read_block(be_test@fileNames[1],
+                                            idx$start[3],
+                                            idx$peak_line[3]),
+                                global_mtd)
+    expect_equal(nrow(sv), 1L)
+    expect_equal(sv$scanIndex, 1L)
+    expect_equal(sv$msLevel, 2L)
+    expect_equal(sv$library_spectrum_name, "PEPTIDE/2")
+    expect_equal(sv$peak_attribute, "optional_col")
+
+    ## Spectrum 2
+    sv2 <- .spectrum_variables(2L,
+                                .read_block(be_test@fileNames[1], idx$start[4],
+                                            idx$peak_line[4]),
+                                global_mtd)
+    expect_equal(sv2$scanIndex, 2L)
+    expect_equal(sv2$library_spectrum_name, "OTHER/3")
+
+    ## Own terms take precedence over the global AttributeSet
+    own <- c("MS:1000511|ms level=1", "MS:1003061|library spectrum name=X/1",
+            "MS:1000465|scan polarity=MS:1000130|positive scan",
+            "MS:1000894|retention time=7",
+            "MS:1000525|spectrum representation=MS:1000127|centroid spectrum")
+    sv3 <- .spectrum_variables(1L, own, global_mtd)
+    expect_equal(sv3$msLevel, 1L)
+    expect_equal(sv3$library_spectrum_name, "X/1")
+
+    ## Isolation window limits are derived from target and offsets
+    iw <- c(own,
+            "MS:1000827|isolation window target m/z=500",
+            "MS:1000828|isolation window lower offset=1.5",
+            "MS:1000829|isolation window upper offset=2.5")
+    sv4 <- .spectrum_variables(1L, iw, global_mtd)
+    expect_equal(sv4$isolationWindowTargetMz, 500)
+    expect_equal(sv4$isolationWindowLowerMz, 498.5)
+    expect_equal(sv4$isolationWindowUpperMz, 502.5)
+})
+
+test_that(".merge_spectrum_mtd_section works", {
+    be_test <- backendInitialize(MsBackendMzSpecLib(), small_file_opt)
+    idx <- be_test@index
+    rows <- which(idx$attrset & idx$kind == "Spectrum")
+    global_mtd <- setNames(lapply(rows, function(j)
+        .parse_attributes(.read_block(be_test@fileNames[1], idx$start[j],
+                                      idx$end[j]))),
+        idx$key[rows])
+
+    mtd <- .merge_spectrum_mtd_section(1L,
+                                .read_block(be_test@fileNames[1], idx$start[3],
+                                            idx$peak_line[3]),
+                                global_mtd)
+    expect_equal(colnames(mtd), c("group", "accession", "name", "value",
+                                    "spectra_variable","repeatable"))
+    expect_false(anyNA(mtd$spectra_variable))
+    ## Own term and global term are both present
+    expect_equal(mtd$value[mtd$accession == "MS:1003061"], "PEPTIDE/2")
+    expect_equal(mtd$value[mtd$accession == "MS:1003254"], "optional_col")
+    expect_equal(mtd$value[mtd$accession == "MS:1000511"], "2")
+    ## Analyte / Interpretation sections are not part of the spectrum metadata
+    expect_false("MS:1000888" %in% mtd$accession)
+    expect_false("MS:1003208" %in% mtd$accession)
+
+    ## Empty list of global tables
+    mtd_no_global <- .merge_spectrum_mtd_section(1L,
+                                .read_block(be_test@fileNames[1], idx$start[3],
+                                            idx$peak_line[3]),
+                                list())
+    expect_false("MS:1000511" %in% mtd_no_global$accession)
+    expect_true("MS:1003061" %in% mtd_no_global$accession)
+
+    ## Precedence: own terms > global terms
+    own <- c("MS:1000511|ms level=1")
+    mtd_priority <- .merge_spectrum_mtd_section(1L, own, global_mtd)
+    expect_equal(mtd_priority$value[mtd_priority$accession == "MS:1000511"],
+                "1")
+
+    ## Not-repeatable fields are only kept once
+    dup <- c("MS:1000511|ms level=1")
+    mtd_dup <- .merge_spectrum_mtd_section(1L, dup, global_mtd)
+    expect_equal(sum(mtd_dup$accession == "MS:1000511"), 1L)
+    expect_equal(mtd_dup$value[mtd_dup$accession == "MS:1000511"], "1")
+})
+
+test_that(".split_by_tags works", {
+    section <- small_lines[8:12]
+    res <- .split_by_tags(section, .SPECTRUM_SECTION)
+    expect_type(res, "list")
+    expect_equal(names(res), c("Metadata", "<Analyte=1>", "<Interpretation=1>"))
+    expect_equal(res[["Metadata"]], section[1])
+    expect_equal(res[["<Analyte=1>"]], section[3])
+    expect_equal(res[["<Interpretation=1>"]], section[5])
+
+    ## No tags: everything is Metadata
+    res2 <- .split_by_tags(section[c(1, 3)], .SPECTRUM_SECTION)
+    expect_equal(names(res2), "Metadata")
+    expect_equal(res2$Metadata, section[c(1, 3)])
+})
+
+test_that(".polarity works", {
+    expect_equal(.polarity("MS:1000130|positive scan"), 1L)
+    expect_equal(.polarity("MS:1000129|negative scan"), 0L)
+    expect_equal(.polarity(NA_character_), -1L)
+    expect_equal(.polarity("MS:9999999|unknown"), -1L)
+})
+
+test_that(".spectrum_representation works", {
+    expect_equal(.spectrum_representation("MS:1000127|centroid spectrum"),
+                     TRUE)
+    expect_equal(.spectrum_representation("MS:1000128|profile spectrum"),
+                     FALSE)
+    expect_equal(.spectrum_representation(NA_character_), NA)
+    expect_equal(.spectrum_representation("MS:9999999|unknown"), NA)
+})
+
+test_that(".rtime works", {
+    ## seconds, unit column removed
+    df <- data.frame(rtime = 12.5, rtimeUnit = "UO:0000010|second", other = 1)
+    res <- .rtime(df)
+    expect_equal(res$rtime, 12.5)
+    expect_false("rtimeUnit" %in% names(res))
+
+    ## no unit column: assumed seconds
+    df <- data.frame(rtime = 7, other = 1)
+    res <- .rtime(df)
+    expect_equal(res$rtime, 7)
+    expect_equal(names(res), c("rtime", "other"))
+
+    ## minutes -> seconds, unit column removed
+    df <- data.frame(rtime = 2, rtimeUnit = "UO:0000031|minute", other = 1)
+    res <- .rtime(df)
+    expect_equal(res$rtime, 120)
+    expect_equal(names(res), c("rtime", "other"))
+    expect_equal(res$other, 1)
+
+    ## hours -> seconds
+    df <- data.frame(rtime = 1.5, rtimeUnit = "UO:0000032|hour", other = 1)
+    expect_equal(.rtime(df)$rtime, 5400)
+
+    ## unknown unit: default seconds
+    df <- data.frame(rtime = 7, rtimeUnit = "UO:9999999|unknown", other = 1)
+    expect_equal(.rtime(df)$rtime, 7)
+})
+
+test_that(".parse_other_attributes works", {
+    mtd <- data.frame(
+        group = c(NA, NA, NA),
+        accession = c("MS:1000511", "MS:1003275", "MS:1003276"),
+        name = c("ms level", "other attribute name", "other attribute value"),
+        value = c("2", "myVar", "myValue"),
+        spectra_variable = c("msLevel", NA, NA))
+    res <- .parse_other_attributes(mtd)
+    expect_equal(nrow(res), 2L)
+    expect_false(any(c("MS:1003275", "MS:1003276") %in% res$accession))
+    expect_equal(res$value[res$accession == "MS:1000511"], "2")
+    ## new row: name of the field -> value
+    new <- res[res$accession == "MS:0", ]
+    expect_equal(nrow(new), 1L)
+    expect_equal(new$name, "myVar")
+    expect_equal(new$value, "myValue")
+    expect_equal(new$spectra_variable, "myVar")
+})
+
+test_that(".peaks_table works", {
+    idx <- be@index
+    cols <- c("mz", "intensity", "annotation")
+
+    p1 <- .peaks_table("1", be@fileNames[1], idx, cols)
+    expect_s3_class(p1, "data.frame")
+    expect_equal(colnames(p1), cols)
+    expect_equal(nrow(p1), 2L)
+    expect_equal(p1$mz, c(100.1, 200.2))
+    expect_equal(p1$intensity, c(10, 20))
+    expect_equal(p1$annotation, c("b2", "y3"))
+
+    ## With optional columns
+    be_test <- backendInitialize(MsBackendMzSpecLib(), small_file_opt)
+    idx_test <- be_test@index
+    cols_test <- peaksVariables(be_test, index = 1L)
+    p2 <- .peaks_table("1", be_test@fileNames[1], idx_test, cols_test)
+    expect_equal(nrow(p2), 2L)
+    expect_equal(p2$mz, c(100.1, 200.2))
+    expect_equal(p2$intensity, c(10, 20))
+    expect_equal(p2$annotation, c("b2", "y3"))
+    expect_equal(p2$optional_col, c(1, 2))
 })

@@ -55,10 +55,11 @@ MsBackendMzSpecLib <- function() {
     idx$file <- i
 
     header <- .parse_attributes(.read_block(file[i], idx$start[1], idx$end[1]))
+    header$file <- i
 
     list(index = idx[, c("file", "tag", "kind", "attrset",
                          "key", "start", "end", "peak_line")],
-         header = header)
+         header = header[, c("file", "group", "accession", "name", "value")])
 }
 
 #' Index the section tags of an mzSpecLib file
@@ -122,8 +123,8 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @noRd
 .read_block <- function(path, start, end) {
-    if (end-start-1 > 0) {
-        body <- read_lines(path, skip = start, n_max = end-start-1,
+    if (end - start > 0) {
+        body <- read_lines(path, skip = start, n_max = end - start,
                             progress = FALSE)
         body[nzchar(body)]
     } else
@@ -186,7 +187,221 @@ MsBackendMzSpecLib <- function() {
 #' @noRd
 .header_value <- function(header, accession) {
     v <- header$value[header$accession == accession]
-    if (length(v)) v[1L] else NA_character_
+    if (length(v)) v else NA_character_
+}
+
+#' Spectra variables of one spectrum block (peaks are not parsed)
+#'
+#' @param scanIndex `integer(1)` with the scanIndex of the Spectrum.
+#'
+#' @param lines `character` lines of the spectrum block.
+#'
+#' @param mtd_all_spectrum `list` of general `<AttributeSet Spectrum=..>`
+#'     tables.
+#'
+#' @return named `list` of scalars, one per spectra variable.
+#'
+#' @importFrom methods as
+#'
+#' @noRd
+.spectrum_variables <- function(scanIndex, lines, mtd_all_spectrum) {
+    mtd <- .merge_spectrum_mtd_section(scanIndex, lines, mtd_all_spectrum)
+    ## Aggregate optional columns of peaks table in a single row
+    if(!all(is.na(val <- .header_value(mtd, "MS:1003254")))){
+        mtd <- rbind(mtd[mtd$accession != "MS:1003254", ],
+                    data.frame(group = NA, accession = "MS:1003254",
+                        name = "peak attribute",
+                        value = paste(val, collapse = "&&"),
+                        spectra_variable = "peak_attribute", repeatable = TRUE))
+    }
+    spectra_data <- as.data.frame(t(setNames(mtd$value, mtd$spectra_variable)))
+
+    spectra_data$scanIndex <- scanIndex
+    ## Convertion to correct type
+    cols <- intersect(names(spectra_data), .VARMAP$spectra_variable)
+    spectra_data[cols] <- mapply(as, spectra_data[cols],
+                    .VARMAP[match(cols, .VARMAP$spectra_variable), "value"],
+                    SIMPLIFY = FALSE)
+    ## Convert variable for Spectra
+    if("rtime" %in% names(spectra_data))
+        spectra_data <- .rtime(spectra_data)
+    if("polarity" %in% names(spectra_data))
+        spectra_data$polarity <- .polarity(spectra_data$polarity)
+    if("spectrum_representation" %in% names(spectra_data))
+        spectra_data$spectrum_representation <-
+                .spectrum_representation(spectra_data$spectrum_representation)
+    if(all(c("isolationWindowTargetMz", "isolationWindowLowerOffset") %in%
+                names(spectra_data)))
+        spectra_data$isolationWindowLowerMz <-
+                spectra_data$isolationWindowTargetMz -
+                    spectra_data$isolationWindowLowerOffset
+    if(all(c("isolationWindowTargetMz", "isolationWindowUpperOffset") %in%
+                names(spectra_data)))
+        spectra_data$isolationWindowUpperMz <-
+                spectra_data$isolationWindowTargetMz +
+                    spectra_data$isolationWindowUpperOffset
+
+    if ("peak_attribute" %in% names(spectra_data))
+        spectra_data[spectra_data$peak_attribute == "NA",
+                        "peak_attribute"] <- NA
+    # DataStorage, dataorigin == path file
+    # Mz = NumericList
+    # Intensity = NumericList
+    spectra_data
+}
+
+#' Merge global spectrum metadata with spectrum specific metadata
+#'
+#' @param scanIndex `integer(1)` with the scanIndex of the Spectrum.
+#'
+#' @param lines `character` lines of the spectrum block.
+#'
+#' @param mtd_all_spectrum `list` of general `<AttributeSet Spectrum=..>`
+#'     tables.
+#'
+#' @return `data.frame` with merged and filtered spectrum metadata.
+#'
+#' @importFrom dplyr left_join
+#'
+#' @noRd
+.merge_spectrum_mtd_section <- function(scanIndex, lines, mtd_all_spectrum){
+    parts <- .split_by_tags(lines, .SPECTRUM_SECTION)
+    parts <- Filter(length, parts)
+    mtd_spectrum <- .parse_attributes(parts[["Metadata"]])
+    mtd_spectrum$spectra_variable <-
+                spectraVariableFromCvTerm(mtd_spectrum$accession)
+
+    ## Precedence: own terms > AttributeSet from last to first
+    ## Attribute set name: "MS:1003212"
+    ## Need to merge by spectrum Id and attribute set name
+    attr_set_names <- .header_value(mtd_spectrum, "MS:1003212")
+    ## Reverse order since last is more important than the first
+    if (any(lapply(mtd_all_spectrum, nrow) != 0)) {
+        mtd_all_spectrum <- rev(mtd_all_spectrum)
+        mtd_global <- do.call(rbind, mtd_all_spectrum[grepl(
+                        paste("all", scanIndex, attr_set_names, sep = "|",
+                                collapse = "|"),
+                        names(mtd_all_spectrum))])
+        mtd_global$spectra_variable <-
+                    spectraVariableFromCvTerm(mtd_global$accession)
+        mtd_spectrum <- rbind(mtd_spectrum, mtd_global)
+    }
+    ## Parse other attribute: MS:1003275, MS:1003276
+    if (!all(is.na(.header_value(mtd_spectrum, "MS:1003275")))){
+        mtd_spectrum <- .parse_other_attributes(mtd_spectrum)
+    }
+    ## Filter not allowed repeated fields
+    mtd <- left_join(mtd_spectrum,
+                    .VARMAP[, c("spectra_variable", "repeatable")],
+                    by = "spectra_variable")
+    mtd <- mtd[!duplicated(mtd$spectra_variable) |
+        mtd$repeatable | is.na(mtd$repeatable), ]
+    ## Update names Unit columns
+    units <- which(mtd$accession == "UO:0000000")
+    mtd$spectra_variable[units] <- paste(mtd$spectra_variable[units-1], "Unit",
+                                        sep = "")
+    mtd[is.na(mtd$spectra_variable), "spectra_variable"] <-
+            mtd[is.na(mtd$spectra_variable), "name"]
+    mtd
+}
+
+
+#' @title Split a section in its subpart
+#' @noRd
+.split_by_tags <- function(section, patterns) {
+    tag_pattern <- paste0("^(?:", paste(patterns, collapse = "|"), ")$")
+    is_tag <- grepl(tag_pattern, section, perl = TRUE)
+    group  <- factor(cumsum(is_tag), levels = 0:sum(is_tag),
+                     labels = c("Metadata", section[is_tag]))
+    split(section[!is_tag], group[!is_tag])
+}
+
+#' "MS:1000130|positive scan" -> 1L
+#' "MS:1000129|negative scan" -> 0L
+#' @noRd
+.polarity <- function(v) {
+    if (!is.na(v)) {
+        if (grepl("MS:1000130", v))
+            return(1L)
+        else if (grepl("MS:1000129", v))
+            return(0L)
+    }
+    return(-1L)
+}
+
+#' "MS:1000127|centroid spectrum" -> TRUE
+#' "MS:1000128|profile spectrum" -> FALSE
+#' @noRd
+.spectrum_representation <- function(v){
+    if (!is.na(v)) {
+        if (grepl("MS:1000127", v))
+            return(TRUE)
+        else if (grepl("MS:1000128", v))
+            return(FALSE)
+    }
+    return(NA)
+}
+
+#' Retention time in seconds, converting based on the unit term of the same
+#' group
+#'
+#' @noRd
+.rtime <- function(spectra_data) {
+    rt_pos <- which(names(spectra_data) == "rtime")
+    if (!is.na(rt_pos)) {
+        unit <- ifelse(names(spectra_data)[rt_pos+1] == "rtimeUnit",
+                        spectra_data["rtimeUnit"], "UO:0000010|second")
+        factor <- switch(sub("\\|.*$", "", unit),
+                        "UO:0000031" = 60,
+                        "UO:0000032" = 3600,
+                        1)
+        spectra_data["rtime"] <- spectra_data["rtime"] * factor
+        spectra_data["rtimeUnit"] <- NULL
+    }
+    spectra_data
+}
+
+#' Parse `other attribute` fields and merging names of the field (`MS:1003275`)
+#' and its value (`MS:1003276`)
+#'
+#' @return Update `data.frame` without the rows `MS:1003275` and `MS:1003276`
+#'     and new rows based on their values.
+#'
+#' @noRd
+.parse_other_attributes <- function(mtd) {
+    names <- .header_value(mtd, "MS:1003275")
+    values <- .header_value(mtd, "MS:1003276")
+    rbind(mtd[!(mtd$accession %in% c("MS:1003275", "MS:1003276")), ],
+          data.frame(group = NA, accession = "MS:0", name = names,
+                     value = values, spectra_variable = names))
+}
+
+#' Read the peaks of a spectrum as a data.frame
+#'
+#' @param s `character(1)` index of the spectrum.
+#'
+#' @param fileNames `character(1)` path to the file.
+#'
+#' @param idx `data.frame` with the `peak_line` and `end` line positions of
+#'     each peak table.
+#'
+#' @param columns `character` column names of the peaks table.
+#'
+#' @return `data.frame` with the peaks, where `mz` and `intensity` are numeric.
+#'
+#' @importFrom utils read.delim2
+#'
+#' @noRd
+.peaks_table <- function(s, fileNames, idx, columns) {
+    ## Suppress warning since the spectrum can have different number of columns
+    ## Read empty columns to merge later
+    spectra_idx <- idx[which(idx$key == s), ]
+    peaks_data <- suppressWarnings(read.delim2(text = .read_block(fileNames,
+                        spectra_idx$peak_line-1, spectra_idx$end-1),
+                        sep = "\t", col.names = columns))
+    peaks_data$mz <- as.numeric(peaks_data$mz)
+    peaks_data$intensity <- as.numeric(peaks_data$intensity)
+    peaks_data
 }
 
 ## GLOBAL VARIABLES ------------------------------------------------------------
@@ -216,6 +431,8 @@ MsBackendMzSpecLib <- function() {
     "$"
 )
 
+#' Tags of mzSpecLib file
+#' @noRd
 .SECTION <- c("<mzSpecLib>",
             "<AttributeSet Spectrum=\\w+>",
             "<AttributeSet Analyte=\\w+>",
@@ -223,3 +440,12 @@ MsBackendMzSpecLib <- function() {
             "<AttributeSet Cluster=\\w+>",
             "<Cluster=\\d+>",
             "<Spectrum=\\d+>")
+
+#' Tags of a Spectrum section
+#' @noRd
+.SPECTRUM_SECTION <- c("<AttributeSet Spectrum=\\w+>",
+                    "<Analyte=\\d+>",
+                    "<Interpretation=\\d+>",
+                    "<InterpretationMember=\\d+>")
+
+.BASE_PEAK_COLS <- c("mz", "intensity", "annotation")

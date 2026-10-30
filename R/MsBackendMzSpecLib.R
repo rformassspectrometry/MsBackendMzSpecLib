@@ -31,6 +31,19 @@
 #'   This method is supposed to be called right after creating a
 #'   `MsBackendMzSpecLib` object with `MsBackendMzSpecLib()` function.
 #'
+#' - `peaksData()`: gets the peak data of the spectra in the backend.
+#'   Returns a `list` of `data.frame` with columns defined by parameter
+#'   `columns` (which defaults to `columns = c("mz", "intensity")`. Use
+#'   `peaksVariables()` to list all supported and available columns for a
+#'   backend. The length of the `list` is equal to the number of spectra in
+#'   `object`.
+#'
+#' - `peaksVariables()`: gets the supported peak variables (columns) for the
+#'   backend.
+#'
+#' - `spectraData()`: gets spectra variables (specified by `columns`) from
+#'   `object`.
+#'
 #' - `spectraVariables()`: returns a `character` vector with the spectra
 #'   variables names of core spectra variables defined in the Spectra package
 #'   and other additional variables contained in `object`.
@@ -53,7 +66,14 @@
 #'   setup to import data in parallel. Defaults to `BPPARAM = bpparam()`.
 #'   See [BiocParallel::bpparam()] for more information.
 #'
+#' @param columns For `spectraData()`: names of the spectra variables to extract
+#'   from `object`. For `peaksData()`: names of the peak variables to extract.
+#'   Defaults to `columns = c("mz", "intensity")`.
+#'
 #' @param files `character` specifying mzSpecLib file names.
+#'
+#' @param index `integer(1)` For `peaksVariables()`: index of the desired
+#'     spectrum.
 #'
 #' @param object A `MsBackendMzSpecLib` object
 #'
@@ -78,6 +98,12 @@
 #' be <- backendInitialize(MsBackendMzSpecLib(), fl)
 #' be
 #'
+#' spectraData <- spectraData(be)
+#' head(spectraData)
+#'
+#' peaksData <- peaksData(be)
+#' head(peaksData[[1]][[1]])
+#'
 NULL
 
 #' @importClassesFrom Spectra MsBackendCached
@@ -98,6 +124,16 @@ setClass(
                             file = integer()),
         readonly = TRUE,
         version = "0.1"))
+
+#' @importMethodsFrom Spectra spectraVariables
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @export
+setMethod("spectraVariables", "MsBackendMzSpecLib",
+          function(object, ...) {
+              union(callNextMethod(object), .VARMAP$spectra_variable)
+          })
 
 #' @importMethodsFrom Spectra spectraVariableMapping
 #'
@@ -144,24 +180,25 @@ setMethod("backendInitialize", "MsBackendMzSpecLib",
 
     object <- .initialize(object, files, BPPARAM)
 
+    ## Initialize cached backend
+    object <- callNextMethod(
+        object, nspectra = length(object),
+        spectraVariables = spectraVariables(object))
     validObject(object)
     object
-})
+          })
 
 #' @rdname MsBackendMzSpecLib
 #'
 #' @importFrom methods show
 setMethod("show", "MsBackendMzSpecLib", function(object) {
-    nm  <- .header_value(object@header, "MS:1003188") ## library name
-    ver <- .header_value(object@header, "MS:1003190") ## library version
-    lfv <- .header_value(object@header, "MS:1003186") ## library format version
+    ver <- .header_value(object@header, "MS:1003190")[1L] ## library version
+    lfv <- .header_value(object@header, "MS:1003186")[1L] ## library format v
     cat("MsBackendMzSpecLib with", length(object), "spectra\n")
     cat(" library format version: ", lfv, "\n")
-    cat(" library name: ", ifelse(is.na(nm), "<unnamed>", nm), "\n")
     cat(ifelse(!is.na(ver), paste0(" library version: ", ver, "\n"), ""))
-    cat(" files: ", object@fileNames, "\n")
+    cat(" files: \n\t", paste(object@fileNames, collapse = "; \n\t"), "\n")
 })
-
 
 #' @rdname MsBackendMzSpecLib
 #'
@@ -171,3 +208,116 @@ setMethod("show", "MsBackendMzSpecLib", function(object) {
 setMethod("length", "MsBackendMzSpecLib", function(x) {
     sum(x@index$kind == "Spectrum" & !x@index$attrset)
 })
+
+#' @importMethodsFrom Spectra spectraData
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @importFrom data.table rbindlist
+#'
+#' @importFrom BiocParallel bplapply bpparam
+#'
+#' @importFrom IRanges NumericList
+#'
+#' @importFrom S4Vectors DataFrame
+#'
+#' @export
+setMethod("spectraData", "MsBackendMzSpecLib",
+        function(object, columns = spectraVariables(object),
+                 BPPARAM = bpparam()) {
+        idx_tbl <- object@index
+        sps_list <- bplapply(seq_along(object@fileNames), function (f_i) {
+            idx <- idx_tbl[idx_tbl$file == f_i, ]
+            ## Get global AttributeSet = Spectrum
+            set_rows <- which(idx$attrset & idx$kind == "Spectrum")
+            metadata_all_spectrum <- setNames(lapply(set_rows, function(j) {
+                .parse_attributes(.read_block(object@fileNames[f_i],
+                                            idx$start[j], idx$end[j]))
+                }), idx$key[set_rows])
+
+            ## Get Metadata from single spectra
+            rows <- which(!idx$attrset & idx$kind == "Spectrum")
+            spectra_data <- as.data.frame(rbindlist(
+                lapply(rows, function(j) {
+                    spectra_data <- .spectrum_variables(as.integer(idx$key[j]),
+                                .read_block(object@fileNames[f_i], idx$start[j],
+                                            idx$peak_line[j]),
+                                        metadata_all_spectrum)
+                    ## Read peaks table
+                    if (length(columns) != length(spectraVariables(object)) &&
+                        any(.BASE_PEAK_COLS %in% columns)) {
+                        p_tbl <- .peaks_table(idx$key[j], object@fileNames[f_i],
+                                                idx, .BASE_PEAK_COLS)
+                        if ("mz" %in% columns)
+                            spectra_data$mz <- list(p_tbl$mz)
+                        if ("intensity" %in% columns)
+                            spectra_data$intensity <- list(p_tbl$intensity)
+                    }
+                    spectra_data
+                }), fill = TRUE))
+            spectra_data$dataOrigin <- basename(object@fileNames[f_i])
+            spectra_data$dataStorage <- object@fileNames[f_i]
+            ## TODO: export optional columns by default?
+            cols <- intersect(columns, names(spectra_data))
+            spectra_data[cols]
+        }, BPPARAM = BPPARAM)
+        sps <- DataFrame(rbindlist(sps_list, fill = TRUE))
+        if ("mz" %in% columns)
+            sps$mz <- NumericList(sps$mz, compress = FALSE)
+        if ("intensity" %in% columns)
+            sps$intensity <- NumericList(sps$intensity, compress = FALSE)
+        sps
+        })
+
+#' @importMethodsFrom Spectra peaksData
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @importFrom Spectra rbindlistWithRownames
+#'
+#' @importFrom BiocParallel bplapply bpparam
+#'
+#' @export
+setMethod("peaksData", "MsBackendMzSpecLib",
+        function(object, columns = c("mz", "intensity"),
+                 BPPARAM = bpparam()) {
+            if (!all(columns %in% peaksVariables(object)))
+                stop("Some of the requested columns are not available. Use ",
+                    "peaksVariables() to list the supported columns.")
+            idx_tbl <- object@index
+            sps_list <- bplapply(seq_along(object@fileNames), function (f_i) {
+                idx <- idx_tbl[idx_tbl$file == f_i, ]
+                spectrum <- which(!idx$attrset & idx$kind == "Spectrum")
+                peaks_data <- bplapply(spectrum, function(s) {
+                    p_tbl <- .peaks_table(idx$key[s],
+                                        object@fileNames[f_i], idx,
+                                        peaksVariables(object,
+                                                    as.integer(idx$key[s])))
+                    p_tbl[make.names(intersect(columns,
+                                        peaksVariables(object,
+                                                    as.integer(idx$key[s]))))]
+                }, BPPARAM = BPPARAM)
+                peaks_data
+            })
+            sps_list
+        })
+
+#' @importMethodsFrom Spectra peaksVariables
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @importFrom stats na.omit
+#'
+#' @export
+setMethod("peaksVariables", "MsBackendMzSpecLib",
+        function(object, index = NULL, ...) {
+            attrs <- as.character(
+                  spectraData(object, "peak_attribute")[["peak_attribute"]])
+            if (!is.null(index)) {
+                attrs <- attrs[index]
+                if (anyNA(attrs))
+                    attrs <- character()
+            }
+            attrs <- attrs[!is.na(attrs)]
+            unique(c(.BASE_PEAK_COLS, unlist(strsplit(attrs, "&&"))))
+        })

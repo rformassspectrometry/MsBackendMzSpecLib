@@ -5,17 +5,27 @@ export(spectraVariableFromCvTerm)
 export(spectraVariableToCvTerm)
 exportMethods(backendInitialize)
 exportMethods(length)
+exportMethods(peaksData)
+exportMethods(peaksVariables)
+exportMethods(spectraData)
 exportMethods(spectraVariableMapping)
+exportMethods(spectraVariables)
 importClassesFrom(Spectra,MsBackendCached)
 importFrom(BiocParallel,
   bplapply,
   bpparam
 )
+importFrom(IRanges,NumericList)
 importFrom(MetaboCoreUtils,
   nameMapping,
   translate
 )
+importFrom(S4Vectors,DataFrame)
+importFrom(Spectra,rbindlistWithRownames)
+importFrom(data.table,rbindlist)
+importFrom(dplyr,left_join)
 importFrom(methods,
+  as,
   callNextMethod,
   new,
   show,
@@ -26,7 +36,15 @@ importFrom(readr,
   read_lines,
   read_lines_chunked
 )
-importFrom(stats,setNames)
+importFrom(stats,
+  na.omit,
+  setNames
+)
 importFrom(stringr,str_match)
+importFrom(utils,read.delim2)
 importMethodsFrom(Spectra,backendInitialize)
+importMethodsFrom(Spectra,peaksData)
+importMethodsFrom(Spectra,peaksVariables)
+importMethodsFrom(Spectra,spectraData)
 importMethodsFrom(Spectra,spectraVariableMapping)
+importMethodsFrom(Spectra,spectraVariables)

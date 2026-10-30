@@ -3,13 +3,19 @@
 %   R/MsBackendMzSpecLib.R
 \name{MsBackendMzSpecLib}
 \alias{MsBackendMzSpecLib}
+\alias{spectraVariables,MsBackendMzSpecLib-method}
 \alias{spectraVariableMapping,MsBackendMzSpecLib-method}
 \alias{backendInitialize,MsBackendMzSpecLib-method}
 \alias{show,MsBackendMzSpecLib-method}
 \alias{length,MsBackendMzSpecLib-method}
+\alias{spectraData,MsBackendMzSpecLib-method}
+\alias{peaksData,MsBackendMzSpecLib-method}
+\alias{peaksVariables,MsBackendMzSpecLib-method}
 \title{MsBackend for mzSpecLib files}
 \usage{
 MsBackendMzSpecLib()
+
+\S4method{spectraVariables}{MsBackendMzSpecLib}(object, ...)
 
 \S4method{spectraVariableMapping}{MsBackendMzSpecLib}(object, ...)
 
@@ -18,6 +24,12 @@ MsBackendMzSpecLib()
 \S4method{show}{MsBackendMzSpecLib}(object)
 
 \S4method{length}{MsBackendMzSpecLib}(x)
+
+\S4method{spectraData}{MsBackendMzSpecLib}(object, columns = spectraVariables(object), BPPARAM = bpparam())
+
+\S4method{peaksData}{MsBackendMzSpecLib}(object, columns = c("mz", "intensity"), BPPARAM = bpparam())
+
+\S4method{peaksVariables}{MsBackendMzSpecLib}(object, index = NULL, ...)
 }
 \arguments{
 \item{object}{A \code{MsBackendMzSpecLib} object}
@@ -31,6 +43,13 @@ setup to import data in parallel. Defaults to \code{BPPARAM = bpparam()}.
 See \code{\link[BiocParallel:bpparam]{BiocParallel::bpparam()}} for more information.}
 
 \item{x}{A \code{MsBackendMzSpecLib} object}
+
+\item{columns}{For \code{spectraData()}: names of the spectra variables to extract
+from \code{object}. For \code{peaksData()}: names of the peak variables to extract.
+Defaults to \code{columns = c("mz", "intensity")}.}
+
+\item{index}{\code{integer(1)} For \code{peaksVariables()}: index of the desired
+spectrum.}
 }
 \description{
 The \code{MsBackendMzSpecLib} \link[Spectra:MsBackend]{Spectra::MsBackend} backend provides an interface
@@ -49,6 +68,19 @@ spectra variable names can be listed by the
 for more information on spectra attributes and the names and details for
 the individual controlled vocabulary (CV) terms.
 }
+\details{
+The \code{MsBackendMzSpecLib} is composed of three elements:
+\itemize{
+\item \code{fileNames}: \code{character} vector with the associated files;
+\item \code{index}: \code{data.frame} with basic information for each section in the
+file. For each tag, it reports which tag it is, whether it is an
+AttributeSet tag, and its identifier key (if present), along with the
+start and end positions in the file and, if it is a spectrum, the start of
+the peak subsection;
+\item \code{header}: \code{data.frame} with the first parsed section of the file
+containing the file metadata.
+}
+}
 \section{Available methods}{
 
 
@@ -60,6 +92,16 @@ methods from the \link[Spectra:MsBackend]{Spectra::MsBackend} class.
 object) using mzSpecLib data files whose path is specified by \code{files}.
 This method is supposed to be called right after creating a
 \code{MsBackendMzSpecLib} object with \code{MsBackendMzSpecLib()} function.
+\item \code{peaksData()}: gets the peak data of the spectra in the backend.
+Returns a \code{list} of \code{data.frame} with columns defined by parameter
+\code{columns} (which defaults to \code{columns = c("mz", "intensity")}. Use
+\code{peaksVariables()} to list all supported and available columns for a
+backend. The length of the \code{list} is equal to the number of spectra in
+\code{object}.
+\item \code{peaksVariables()}: gets the supported peak variables (columns) for the
+backend.
+\item \code{spectraData()}: gets spectra variables (specified by \code{columns}) from
+\code{object}.
 \item \code{spectraVariables()}: returns a \code{character} vector with the spectra
 variables names of core spectra variables defined in the Spectra package
 and other additional variables contained in \code{object}.
@@ -79,6 +121,12 @@ fl <- system.file("examples", "fetal_brain_tiny.mzspeclib.txt",
 ## Create a MsBackend instance for that file
 be <- backendInitialize(MsBackendMzSpecLib(), fl)
 be
+
+spectraData <- spectraData(be)
+head(spectraData)
+
+peaksData <- peaksData(be)
+head(peaksData[[1]][[1]])
 
 }
 \seealso{
