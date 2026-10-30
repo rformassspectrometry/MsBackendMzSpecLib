@@ -31,7 +31,7 @@
 #'   This method is supposed to be called right after creating a
 #'   `MsBackendMzSpecLib` object with `MsBackendMzSpecLib()` function.
 #'
-#' - `peaksData()`: gets the peak matrices of the spectra in the backend.
+#' - `peaksData()`: gets the peak data of the spectra in the backend.
 #'   Returns a `list` of `data.frame` with columns defined by parameter
 #'   `columns` (which defaults to `columns = c("mz", "intensity")`. Use
 #'   `peaksVariables()` to list all supported and available columns for a
@@ -180,6 +180,10 @@ setMethod("backendInitialize", "MsBackendMzSpecLib",
 
     object <- .initialize(object, files, BPPARAM)
 
+    ## Initialize cached backend
+    object <- callNextMethod(
+        object, nspectra = length(object),
+        spectraVariables = spectraVariables(object))
     validObject(object)
     object
           })
@@ -209,11 +213,13 @@ setMethod("length", "MsBackendMzSpecLib", function(x) {
 #'
 #' @rdname MsBackendMzSpecLib
 #'
-#' @importFrom Spectra rbindlistWithRownames
+#' @importFrom data.table rbindlist
 #'
 #' @importFrom BiocParallel bplapply bpparam
 #'
 #' @importFrom IRanges NumericList
+#'
+#' @importFrom S4Vectors DataFrame
 #'
 #' @export
 setMethod("spectraData", "MsBackendMzSpecLib",
@@ -231,9 +237,9 @@ setMethod("spectraData", "MsBackendMzSpecLib",
 
             ## Get Metadata from single spectra
             rows <- which(!idx$attrset & idx$kind == "Spectrum")
-            spectra_Data <- rbindlistWithRownames(
+            spectra_data <- as.data.frame(rbindlist(
                 lapply(rows, function(j) {
-                    spectra_Data <- .spectrum_variables(as.integer(idx$key[j]),
+                    spectra_data <- .spectrum_variables(as.integer(idx$key[j]),
                                 .read_block(object@fileNames[f_i], idx$start[j],
                                             idx$peak_line[j]),
                                         metadata_all_spectrum)
@@ -243,20 +249,25 @@ setMethod("spectraData", "MsBackendMzSpecLib",
                         p_tbl <- .peaks_table(idx$key[j], object@fileNames[f_i],
                                                 idx, .BASE_PEAK_COLS)
                         if ("mz" %in% columns)
-                            spectra_Data$mz <- list(p_tbl$mz)
+                            spectra_data$mz <- list(p_tbl$mz)
                         if ("intensity" %in% columns)
-                            spectra_Data$intensity <- list(p_tbl$intensity)
+                            spectra_data$intensity <- list(p_tbl$intensity)
                     }
-                    spectra_Data
-                }), fill = TRUE)
-            spectra_Data$dataOrigin <- basename(object@fileNames[f_i])
-            spectra_Data$dataStorage <- object@fileNames[f_i]
+                    spectra_data
+                }), fill = TRUE))
+            spectra_data$dataOrigin <- basename(object@fileNames[f_i])
+            spectra_data$dataStorage <- object@fileNames[f_i]
             ## TODO: export optional columns by default?
-            cols <- intersect(columns, names(spectra_Data))
-            spectra_Data[cols]
+            cols <- intersect(columns, names(spectra_data))
+            spectra_data[cols]
         }, BPPARAM = BPPARAM)
-        rbindlistWithRownames(sps_list, fill = TRUE)
-})
+        sps <- DataFrame(rbindlist(sps_list, fill = TRUE))
+        if ("mz" %in% columns)
+            sps$mz <- NumericList(sps$mz, compress = FALSE)
+        if ("intensity" %in% columns)
+            sps$intensity <- NumericList(sps$intensity, compress = FALSE)
+        sps
+        })
 
 #' @importMethodsFrom Spectra peaksData
 #'

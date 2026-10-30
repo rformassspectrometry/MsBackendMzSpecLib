@@ -329,18 +329,6 @@ test_that(".parse_other_attributes works", {
     expect_equal(new$spectra_variable, "myVar")
 })
 
-test_that("convert_value works", {
-    expect_equal(convert_value("2", "integer"), 2L)
-    expect_equal(convert_value("2.6", "integer"), 3L)
-    expect_equal(convert_value(c("1", "2.4"), "integer"), c(1L, 2L))
-    expect_equal(convert_value("1.5", "numeric"), 1.5)
-    expect_equal(convert_value(c("1", "2.5"), "numeric"), c(1, 2.5))
-    expect_equal(convert_value("abc", "character"), "abc")
-    expect_equal(convert_value("abc", "other"), "abc")
-    expect_equal(convert_value(NA_character_, "integer"), NA_integer_)
-    expect_equal(convert_value(NA_character_, "numeric"), NA_real_)
-})
-
 test_that(".peaks_table works", {
     idx <- be@index
     cols <- c("mz", "intensity", "annotation")

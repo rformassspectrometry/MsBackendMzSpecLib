@@ -123,8 +123,8 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @noRd
 .read_block <- function(path, start, end) {
-    if (end-start > 0) {
-        body <- read_lines(path, skip = start, n_max = end-start,
+    if (end - start > 0) {
+        body <- read_lines(path, skip = start, n_max = end - start,
                             progress = FALSE)
         body[nzchar(body)]
     } else
@@ -201,6 +201,8 @@ MsBackendMzSpecLib <- function() {
 #'
 #' @return named `list` of scalars, one per spectra variable.
 #'
+#' @importFrom methods as
+#'
 #' @noRd
 .spectrum_variables <- function(scanIndex, lines, mtd_all_spectrum) {
     mtd <- .merge_spectrum_mtd_section(scanIndex, lines, mtd_all_spectrum)
@@ -212,40 +214,40 @@ MsBackendMzSpecLib <- function() {
                         value = paste(val, collapse = "&&"),
                         spectra_variable = "peak_attribute", repeatable = TRUE))
     }
+    spectra_data <- as.data.frame(t(setNames(mtd$value, mtd$spectra_variable)))
 
-    spectra_Data <- as.data.frame(t(setNames(mtd$value, mtd$spectra_variable)))
-
-    spectra_Data$scanIndex <- scanIndex
+    spectra_data$scanIndex <- scanIndex
     ## Convertion to correct type
-    cols <- intersect(names(spectra_Data), .VARMAP$spectra_variable)
-    spectra_Data[cols] <- Map(convert_value, spectra_Data[cols],
-                    .VARMAP[match(cols, .VARMAP$spectra_variable), "value"])
+    cols <- intersect(names(spectra_data), .VARMAP$spectra_variable)
+    spectra_data[cols] <- mapply(as, spectra_data[cols],
+                    .VARMAP[match(cols, .VARMAP$spectra_variable), "value"],
+                    SIMPLIFY = FALSE)
     ## Convert variable for Spectra
-    if("rtime" %in% names(spectra_Data))
-        spectra_Data <- .rtime(spectra_Data)
-    if("polarity" %in% names(spectra_Data))
-        spectra_Data$polarity <- .polarity(spectra_Data$polarity)
-    if("spectrum_representation" %in% names(spectra_Data))
-        spectra_Data$spectrum_representation <-
-                .spectrum_representation(spectra_Data$spectrum_representation)
+    if("rtime" %in% names(spectra_data))
+        spectra_data <- .rtime(spectra_data)
+    if("polarity" %in% names(spectra_data))
+        spectra_data$polarity <- .polarity(spectra_data$polarity)
+    if("spectrum_representation" %in% names(spectra_data))
+        spectra_data$spectrum_representation <-
+                .spectrum_representation(spectra_data$spectrum_representation)
     if(all(c("isolationWindowTargetMz", "isolationWindowLowerOffset") %in%
-                names(spectra_Data)))
-        spectra_Data$isolationWindowLowerMz <-
-                spectra_Data$isolationWindowTargetMz -
-                    spectra_Data$isolationWindowLowerOffset
+                names(spectra_data)))
+        spectra_data$isolationWindowLowerMz <-
+                spectra_data$isolationWindowTargetMz -
+                    spectra_data$isolationWindowLowerOffset
     if(all(c("isolationWindowTargetMz", "isolationWindowUpperOffset") %in%
-                names(spectra_Data)))
-        spectra_Data$isolationWindowUpperMz <-
-                spectra_Data$isolationWindowTargetMz +
-                    spectra_Data$isolationWindowUpperOffset
+                names(spectra_data)))
+        spectra_data$isolationWindowUpperMz <-
+                spectra_data$isolationWindowTargetMz +
+                    spectra_data$isolationWindowUpperOffset
 
-    if ("peak_attribute" %in% names(spectra_Data))
-        spectra_Data[spectra_Data$peak_attribute == "NA",
+    if ("peak_attribute" %in% names(spectra_data))
+        spectra_data[spectra_data$peak_attribute == "NA",
                         "peak_attribute"] <- NA
     # DataStorage, dataorigin == path file
     # Mz = NumericList
     # Intensity = NumericList
-    spectra_Data
+    spectra_data
 }
 
 #' Merge global spectrum metadata with spectrum specific metadata
@@ -344,19 +346,19 @@ MsBackendMzSpecLib <- function() {
 #' group
 #'
 #' @noRd
-.rtime <- function(spectra_Data) {
-    rt_pos <- which(names(spectra_Data) == "rtime")
+.rtime <- function(spectra_data) {
+    rt_pos <- which(names(spectra_data) == "rtime")
     if (!is.na(rt_pos)) {
-        unit <- ifelse(names(spectra_Data)[rt_pos+1] == "rtimeUnit",
-                        spectra_Data["rtimeUnit"], "UO:0000010|second")
+        unit <- ifelse(names(spectra_data)[rt_pos+1] == "rtimeUnit",
+                        spectra_data["rtimeUnit"], "UO:0000010|second")
         factor <- switch(sub("\\|.*$", "", unit),
                         "UO:0000031" = 60,
                         "UO:0000032" = 3600,
                         1)
-        spectra_Data["rtime"] <- spectra_Data["rtime"] * factor
-        spectra_Data["rtimeUnit"] <- NULL
+        spectra_data["rtime"] <- spectra_data["rtime"] * factor
+        spectra_data["rtimeUnit"] <- NULL
     }
-    spectra_Data
+    spectra_data
 }
 
 #' Parse `other attribute` fields and merging names of the field (`MS:1003275`)
@@ -372,24 +374,6 @@ MsBackendMzSpecLib <- function() {
     rbind(mtd[!(mtd$accession %in% c("MS:1003275", "MS:1003276")), ],
           data.frame(group = NA, accession = "MS:0", name = names,
                      value = values, spectra_variable = names))
-}
-
-#' Convert a value to a given type
-#'
-#' @param x Value to convert.
-#'
-#' @param type `character(1)`, one of `"integer"` or `"numeric"`. Any other
-#'     value returns `x` unchanged.
-#'
-#' @return `x` converted to the requested type.
-#'
-#' @noRd
-convert_value <- function(x, type) {
-    switch(type,
-        integer = as.integer(round(as.numeric(x))),
-        numeric = as.numeric(x),
-        x
-    )
 }
 
 #' Read the peaks of a spectrum as a data.frame

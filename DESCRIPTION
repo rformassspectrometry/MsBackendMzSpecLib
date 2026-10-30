@@ -23,12 +23,14 @@ Depends:
 Imports:
     MetaboCoreUtils (>= 1.21.2),
     Spectra,
+    data.table,
     methods,
     BiocParallel,
     readr,
     stringr,
     dplyr,
-    IRanges
+    IRanges,
+    S4Vectors
 Suggests:
     testthat,
     callr

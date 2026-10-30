@@ -20,9 +20,12 @@ importFrom(MetaboCoreUtils,
   nameMapping,
   translate
 )
+importFrom(S4Vectors,DataFrame)
 importFrom(Spectra,rbindlistWithRownames)
+importFrom(data.table,rbindlist)
 importFrom(dplyr,left_join)
 importFrom(methods,
+  as,
   callNextMethod,
   new,
   show,

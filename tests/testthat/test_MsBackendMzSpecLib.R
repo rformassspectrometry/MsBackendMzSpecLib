@@ -91,7 +91,7 @@ test_that("spectraData,MsBackendMzSpecLib works", {
     ## unknown columns are ignored
     sd3 <- spectraData(be, c("scanIndex", "not_a_variable"),
                         BPPARAM = BiocParallel::SerialParam())
-    expect_equal(sd3, data.frame("scanIndex" = 1:2))
+    expect_equal(sd3, DataFrame("scanIndex" = 1:2))
 
     ## peaks columns
     sd4 <- spectraData(be, c("scanIndex", "mz", "intensity"),

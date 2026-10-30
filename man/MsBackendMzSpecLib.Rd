@@ -92,7 +92,7 @@ methods from the \link[Spectra:MsBackend]{Spectra::MsBackend} class.
 object) using mzSpecLib data files whose path is specified by \code{files}.
 This method is supposed to be called right after creating a
 \code{MsBackendMzSpecLib} object with \code{MsBackendMzSpecLib()} function.
-\item \code{peaksData()}: gets the peak matrices of the spectra in the backend.
+\item \code{peaksData()}: gets the peak data of the spectra in the backend.
 Returns a \code{list} of \code{data.frame} with columns defined by parameter
 \code{columns} (which defaults to \code{columns = c("mz", "intensity")}. Use
 \code{peaksVariables()} to list all supported and available columns for a
