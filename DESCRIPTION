@@ -1,6 +1,6 @@
 Package: MsBackendMzSpecLib
 Title: MS Data Backend for mzSpecLib Data Files
-Version: 0.97.2
+Version: 0.97.3
 Authors@R:
     c(person(given = "Gabriele", family = "Tomè",
              email = "gabriele.tome@eurac.edu",

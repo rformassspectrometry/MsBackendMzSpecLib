@@ -285,7 +285,7 @@ setMethod("peaksData", "MsBackendMzSpecLib",
                 stop("Some of the requested columns are not available. Use ",
                     "peaksVariables() to list the supported columns.")
             idx_tbl <- object@index
-            sps_list <- bplapply(seq_along(object@fileNames), function (f_i) {
+            sps_list <- lapply(seq_along(object@fileNames), function (f_i) {
                 idx <- idx_tbl[idx_tbl$file == f_i, ]
                 spectrum <- which(!idx$attrset & idx$kind == "Spectrum")
                 peaks_data <- bplapply(spectrum, function(s) {
