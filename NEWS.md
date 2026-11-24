@@ -1,5 +1,10 @@
 # MsBackendMzSpecLib 0.97
 
+## Changes in 0.97.4
+
+- Add `extractByIndex()` and `"["`.
+- Add tests and docs.
+
 ## Changes in 0.97.3
 
 - Fix bug [#5](https://github.com/rformassspectrometry/MsBackendMzSpecLib/issues/5)

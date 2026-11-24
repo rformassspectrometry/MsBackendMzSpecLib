@@ -1,4 +1,5 @@
 library(testthat)
+library(Spectra)
 library(MsBackendMzSpecLib)
 
 test_file <- system.file("examples",

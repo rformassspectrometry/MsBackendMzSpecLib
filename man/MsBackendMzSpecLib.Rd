@@ -11,6 +11,8 @@
 \alias{spectraData,MsBackendMzSpecLib-method}
 \alias{peaksData,MsBackendMzSpecLib-method}
 \alias{peaksVariables,MsBackendMzSpecLib-method}
+\alias{extractByIndex,MsBackendMzSpecLib,ANY-method}
+\alias{[,MsBackendMzSpecLib-method}
 \title{MsBackend for mzSpecLib files}
 \usage{
 MsBackendMzSpecLib()
@@ -30,6 +32,10 @@ MsBackendMzSpecLib()
 \S4method{peaksData}{MsBackendMzSpecLib}(object, columns = c("mz", "intensity"), BPPARAM = bpparam())
 
 \S4method{peaksVariables}{MsBackendMzSpecLib}(object, index = NULL, ...)
+
+\S4method{extractByIndex}{MsBackendMzSpecLib,ANY}(object, i)
+
+\S4method{[}{MsBackendMzSpecLib}(x, i, j, ..., drop = FALSE)
 }
 \arguments{
 \item{object}{A \code{MsBackendMzSpecLib} object}
@@ -50,6 +56,12 @@ Defaults to \code{columns = c("mz", "intensity")}.}
 
 \item{index}{\code{integer(1)} For \code{peaksVariables()}: index of the desired
 spectrum.}
+
+\item{i}{For \code{[}: \code{integer}, \code{logical} to subset the object.}
+
+\item{j}{For \code{[}: not supported.}
+
+\item{drop}{For \code{[}: not considered.}
 }
 \description{
 The \code{MsBackendMzSpecLib} \link[Spectra:MsBackend]{Spectra::MsBackend} backend provides an interface
@@ -126,7 +138,7 @@ spectraData <- spectraData(be)
 head(spectraData)
 
 peaksData <- peaksData(be)
-head(peaksData[[1]][[1]])
+head(peaksData[[1]])
 
 }
 \seealso{

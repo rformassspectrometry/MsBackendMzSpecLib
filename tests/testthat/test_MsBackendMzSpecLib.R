@@ -126,10 +126,10 @@ test_that("peaksData,MsBackendMzSpecLib works", {
     pd <- peaksData(be, BPPARAM = BiocParallel::SerialParam())
     ## one element per file, each with one element per spectrum
     expect_type(pd, "list")
-    expect_length(pd, 1L)
+    expect_length(pd, 2L)
     expect_length(pd[[1]], 2L)
-    p1 <- pd[[1]][[1]]
-    p2 <- pd[[1]][[2]]
+    p1 <- pd[[1]]
+    p2 <- pd[[2]]
     expect_equal(colnames(p1), c("mz", "intensity"))
     expect_equal(p1$mz, c(100.1, 200.2))
     expect_equal(p1$intensity, c(10, 20))
@@ -138,8 +138,8 @@ test_that("peaksData,MsBackendMzSpecLib works", {
 
     ## subset of columns
     pd2 <- peaksData(be, columns = "mz", BPPARAM = BiocParallel::SerialParam())
-    expect_equal(colnames(pd2[[1]][[1]]), "mz")
-    expect_equal(colnames(pd2[[1]][[2]]), "mz")
+    expect_equal(colnames(pd2[[1]]), "mz")
+    expect_equal(colnames(pd2[[2]]), "mz")
 
     ## unavailable column
     expect_error(peaksData(be, columns = c("mz", "not_a_column"),
@@ -151,18 +151,17 @@ test_that("peaksData,MsBackendMzSpecLib works", {
     pd3 <- peaksData(be_test,
                     c("mz", "intensity", "annotation", "optional_col"),
                     BPPARAM = BiocParallel::SerialParam())
-    expect_equal(colnames(pd3[[1]][[1]]),
+    expect_equal(colnames(pd3[[1]]),
                     c("mz", "intensity", "annotation", "optional_col"))
-    expect_equal(colnames(pd3[[1]][[2]]),
+    expect_equal(colnames(pd3[[2]]),
                     c("mz", "intensity", "annotation"))
-    expect_equal(pd3[[1]][[1]]$optional_col, c(1, 2))
+    expect_equal(pd3[[1]]$optional_col, c(1, 2))
 
     ## Read real file
     pd_test_file <- peaksData(be_test_file,
                               BPPARAM = BiocParallel::SerialParam())
     expect_type(pd_test_file, "list")
-    expect_length(pd_test_file, 1L)
-    expect_length(pd_test_file[[1]], 10L)
+    expect_length(pd_test_file, 10L)
 })
 
 test_that("peaksVariables,MsBackendMzSpecLib works", {
@@ -175,4 +174,39 @@ test_that("peaksVariables,MsBackendMzSpecLib works", {
                 c("mz", "intensity", "annotation", "optional_col"))
     expect_equal(peaksVariables(be_test, index = 2L),
                 c("mz", "intensity", "annotation"))
+})
+
+test_that("[,MsBackendMzSpecLib works", {
+    expect_error(MsBackendMzSpecLib()[1])
+
+    res <- be[1]
+    expect_true(validObject(res))
+    expect_equal(res@index, be@index[1:3, , drop = FALSE])
+    expect_equal(res@index$tag, c("<mzSpecLib>", "<AttributeSet Spectrum=all>",
+                                    "<Spectrum=1>" ))
+
+    res <- be[c(TRUE, rep(FALSE, length(be) - 1))]
+    expect_true(validObject(res))
+    expect_equal(res@index, be@index[1:3, , drop = FALSE])
+    expect_equal(res@index$tag, c("<mzSpecLib>", "<AttributeSet Spectrum=all>",
+                                    "<Spectrum=1>" ))
+
+    res <- be_test_file[c(10, 1, 4)]
+    expect_true(validObject(res))
+    expect_equal(res@index,
+                be_test_file@index[c(1:4, 14, 5, 8), , drop = FALSE])
+    expect_all_equal(res@index$file, 1L)
+    expect_equal(rtime(res), rtime(be_test_file)[c(10, 1, 4)])
+
+    ## arbitrary order with duplication
+    res <- be_test_file[c(10, 4, 1, 6, 1, 4)]
+    expect_true(validObject(res))
+    expect_equal(res@index, be_test_file@index[c(1:4, 14, 8, 5, 10, 5, 8), ])
+    expect_all_equal(res@index$file, 1L)
+    expect_equal(rtime(res), rtime(be_test_file)[c(10, 4, 1, 6, 1, 4)])
+
+    res <- be[]
+    expect_equal(length(res), length(be))
+
+    expect_error(be[10^7], "index out of bounds")
 })

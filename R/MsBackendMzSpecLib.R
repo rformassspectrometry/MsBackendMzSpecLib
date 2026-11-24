@@ -70,10 +70,16 @@
 #'   from `object`. For `peaksData()`: names of the peak variables to extract.
 #'   Defaults to `columns = c("mz", "intensity")`.
 #'
+#' @param drop For `[`: not considered.
+#'
 #' @param files `character` specifying mzSpecLib file names.
 #'
 #' @param index `integer(1)` For `peaksVariables()`: index of the desired
 #'     spectrum.
+#'
+#' @param i For `[`: `integer`, `logical` to subset the object.
+#'
+#' @param j For `[`: not supported.
 #'
 #' @param object A `MsBackendMzSpecLib` object
 #'
@@ -102,7 +108,7 @@
 #' head(spectraData)
 #'
 #' peaksData <- peaksData(be)
-#' head(peaksData[[1]][[1]])
+#' head(peaksData[[1]])
 #'
 NULL
 
@@ -299,7 +305,7 @@ setMethod("peaksData", "MsBackendMzSpecLib",
                 }, BPPARAM = BPPARAM)
                 peaks_data
             })
-            sps_list
+            if (length(sps_list) == 1) sps_list[[1]] else sps_list
         })
 
 #' @importMethodsFrom Spectra peaksVariables
@@ -321,3 +327,29 @@ setMethod("peaksVariables", "MsBackendMzSpecLib",
             attrs <- attrs[!is.na(attrs)]
             unique(c(.BASE_PEAK_COLS, unlist(strsplit(attrs, "&&"))))
         })
+
+#' @importMethodsFrom ProtGenerics extractByIndex
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @export
+setMethod("extractByIndex", c("MsBackendMzSpecLib", "ANY"),
+        function(object, i) {
+    object <- .subset_backend(object, i)
+    object <- callNextMethod(object, i = i)
+    object
+})
+
+#' @importFrom methods "slot<-"
+#'
+#' @importFrom MsCoreUtils i2index
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @export
+setMethod("[", "MsBackendMzSpecLib", function(x, i, j, ..., drop = FALSE) {
+    if (missing(i))
+        return(x)
+    i <- i2index(i, length(x))
+    extractByIndex(x, i)
+})

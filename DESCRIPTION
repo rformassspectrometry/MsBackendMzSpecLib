@@ -1,6 +1,6 @@
 Package: MsBackendMzSpecLib
 Title: MS Data Backend for mzSpecLib Data Files
-Version: 0.97.3
+Version: 0.97.4
 Authors@R:
     c(person(given = "Gabriele", family = "Tomè",
              email = "gabriele.tome@eurac.edu",
@@ -26,6 +26,8 @@ Imports:
     data.table,
     methods,
     BiocParallel,
+    MsCoreUtils,
+    ProtGenerics,
     readr,
     stringr,
     dplyr,
