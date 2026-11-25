@@ -2,8 +2,10 @@
 
 ## Changes in 0.97.4
 
-- Add `extractByIndex()` and `"["`.
+- Add `extractByIndex()`, `"["`, `dataStorage` and `$`.
+- Refactor the exporting methods.
 - Add tests and docs.
+- Add initial version of the vignette.
 
 ## Changes in 0.97.3
 

@@ -2,6 +2,8 @@
 #'
 #' @name MsBackendMzSpecLib
 #'
+#' @aliases MsBackendMzSpecLib MsBackendMzSpecLib-class [,MsBackendMzSpecLib-method
+#'
 #' @description
 #'
 #' The `MsBackendMzSpecLib` [Spectra::MsBackend] backend provides an interface
@@ -81,6 +83,8 @@
 #'
 #' @param j For `[`: not supported.
 #'
+#' @param name For `$`: the name of the variable to access.
+#'
 #' @param object A `MsBackendMzSpecLib` object
 #'
 #' @param x A `MsBackendMzSpecLib` object
@@ -88,6 +92,12 @@
 #' @param ... For `spectraVariableMapping()`: ignored.
 #'
 #' @author Johannes Rainer, Gabriele Tomè
+#'
+#' @rdname MsBackendMzSpecLib
+#'
+#' @exportClass MsBackendMzSpecLib
+#'
+#' @return See information for the respective function.
 #'
 #' @seealso The HUPO-PSI mzSpecLib specification,
 #'   <https://www.psidev.info/mzspeclib>.
@@ -110,9 +120,6 @@
 #' peaksData <- peaksData(be)
 #' head(peaksData[[1]])
 #'
-NULL
-
-#' @importClassesFrom Spectra MsBackendCached
 setClass(
     "MsBackendMzSpecLib",
     contains = "MsBackendCached",
@@ -134,8 +141,6 @@ setClass(
 #' @importMethodsFrom Spectra spectraVariables
 #'
 #' @rdname MsBackendMzSpecLib
-#'
-#' @export
 setMethod("spectraVariables", "MsBackendMzSpecLib",
           function(object, ...) {
               union(callNextMethod(object), .VARMAP$spectra_variable)
@@ -145,7 +150,7 @@ setMethod("spectraVariables", "MsBackendMzSpecLib",
 #'
 #' @rdname MsBackendMzSpecLib
 #'
-#' @export
+#' @exportMethod spectraVariableMapping
 setMethod("spectraVariableMapping", "MsBackendMzSpecLib",
           function(object, ...) {
               .SV2CV
@@ -163,12 +168,12 @@ setValidity("MsBackendMzSpecLib", function(object) {
 
 #' @importMethodsFrom Spectra backendInitialize
 #'
-#' @rdname MsBackendMzSpecLib
+#' @importClassesFrom Spectra MsBackendCached
 #'
 #' @importFrom methods callNextMethod
 #'
-#' @export
-setMethod("backendInitialize", "MsBackendMzSpecLib",
+#' @rdname MsBackendMzSpecLib
+setMethod("backendInitialize", signature = "MsBackendMzSpecLib",
           function(object, files, ..., BPPARAM = bpparam()) {
     if (missing(files))
         stop("Parameter 'files' is mandatory for 'MsBackendMzSpecLib'",
@@ -226,8 +231,6 @@ setMethod("length", "MsBackendMzSpecLib", function(x) {
 #' @importFrom IRanges NumericList
 #'
 #' @importFrom S4Vectors DataFrame
-#'
-#' @export
 setMethod("spectraData", "MsBackendMzSpecLib",
         function(object, columns = spectraVariables(object),
                  BPPARAM = bpparam()) {
@@ -250,10 +253,10 @@ setMethod("spectraData", "MsBackendMzSpecLib",
                                             idx$peak_line[j]),
                                         metadata_all_spectrum)
                     ## Read peaks table
-                    if (length(columns) != length(spectraVariables(object)) &&
-                        any(.BASE_PEAK_COLS %in% columns)) {
+                    if (any(.BASE_PEAK_COLS %in% columns)) {
                         p_tbl <- .peaks_table(idx$key[j], object@fileNames[f_i],
-                                                idx, .BASE_PEAK_COLS)
+                                            idx, peaksVariables(object,
+                                                        as.integer(idx$key[j])))
                         if ("mz" %in% columns)
                             spectra_data$mz <- list(p_tbl$mz)
                         if ("intensity" %in% columns)
@@ -282,8 +285,6 @@ setMethod("spectraData", "MsBackendMzSpecLib",
 #' @importFrom Spectra rbindlistWithRownames
 #'
 #' @importFrom BiocParallel bplapply bpparam
-#'
-#' @export
 setMethod("peaksData", "MsBackendMzSpecLib",
         function(object, columns = c("mz", "intensity"),
                  BPPARAM = bpparam()) {
@@ -313,8 +314,6 @@ setMethod("peaksData", "MsBackendMzSpecLib",
 #' @rdname MsBackendMzSpecLib
 #'
 #' @importFrom stats na.omit
-#'
-#' @export
 setMethod("peaksVariables", "MsBackendMzSpecLib",
         function(object, index = NULL, ...) {
             attrs <- as.character(
@@ -331,8 +330,6 @@ setMethod("peaksVariables", "MsBackendMzSpecLib",
 #' @importMethodsFrom ProtGenerics extractByIndex
 #'
 #' @rdname MsBackendMzSpecLib
-#'
-#' @export
 setMethod("extractByIndex", c("MsBackendMzSpecLib", "ANY"),
         function(object, i) {
     object <- .subset_backend(object, i)
@@ -345,11 +342,26 @@ setMethod("extractByIndex", c("MsBackendMzSpecLib", "ANY"),
 #' @importFrom MsCoreUtils i2index
 #'
 #' @rdname MsBackendMzSpecLib
-#'
-#' @export
 setMethod("[", "MsBackendMzSpecLib", function(x, i, j, ..., drop = FALSE) {
     if (missing(i))
         return(x)
     i <- i2index(i, length(x))
     extractByIndex(x, i)
+})
+
+#' @importMethodsFrom Spectra dataStorage
+#'
+#' @rdname MsBackendMzSpecLib
+setMethod("dataStorage", "MsBackendMzSpecLib", function(object) {
+    if (length(f <- spectraData(object, "dataStorage")))
+        f[, 1L]
+    else character(0)
+})
+
+#' @rdname MsBackendMzSpecLib
+setMethod("$", "MsBackendMzSpecLib", function(x, name) {
+    if (!name %in% spectraVariables(x))
+        stop("spectra variable '", name, "' not available")
+
+    spectraData(x, name)[, 1L]
 })

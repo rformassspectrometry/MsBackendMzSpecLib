@@ -210,3 +210,33 @@ test_that("[,MsBackendMzSpecLib works", {
 
     expect_error(be[10^7], "index out of bounds")
 })
+
+test_that("dataStorage,MsBackendMzSpecLib works", {
+    expect_equal(dataStorage(MsBackendMzSpecLib()), character(0))
+
+    res <- dataStorage(be)
+    expect_equal(length(res), length(be))
+    expect_equal(res,
+            be@fileNames[be@index[grep("^<Spectrum", be@index$tag), "file"]])
+
+    expect_equal(basename(dataStorage(be)), dataOrigin(be))
+
+    res <- spectraData(be, "dataStorage")[, 1L]
+    expect_equal(length(res), length(be))
+    expect_equal(res,
+            be@fileNames[be@index[grep("^<Spectrum", be@index$tag), "file"]])
+})
+
+test_that("$,MsBackendMzSpecLib works", {
+    res_all <- spectraData(be)
+
+    res <- be$mz
+    expect_equal(res, res_all$mz)
+
+    expect_equal(be$dataOrigin, dataOrigin(be))
+    expect_equal(be$dataStorage, dataStorage(be))
+
+    res <- spectraData(be)
+    expect_equal(res$scanIndex, be$scanIndex)
+    expect_equal(res$library_spectrum_name, be$library_spectrum_name)
+})
