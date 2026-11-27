@@ -1,0 +1,128 @@
+---
+title: "Description and usage of *MsBackendMzSpecLib*"
+output:
+    BiocStyle::html_document:
+        toc_float: true
+vignette: >
+    %\VignetteIndexEntry{Description and usage of MsBackendMzSpecLib}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+    %\VignettePackage{MsBackendMzSpecLib}
+    %\VignetteDepends{Spectra,BiocStyle,BiocParallel}
+---
+
+```{r style, echo = FALSE, results = 'asis', message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(BiocStyle)
+BiocStyle::markdown()
+```
+
+# Introduction
+
+The `r Biocpkg("Spectra")` package provides a central infrastructure for Mass
+Spectrometry (MS) data in R. The package supports interchangeable use of
+different *backends* to represent or import MS data from a variety of formats
+and sources (such as mzML files). The *MsBackendMzSpecLib"* package adds support
+*mzSpecLib*, a HUPO-PSI formal standard and file format to store and distribute
+spectral libraries. This vignette shows how, and which data can be retrieved
+from such files.
+
+# Installation
+
+The package can be installed from Bioconductor with:
+
+```{r installation, eval = FALSE}
+BiocManager::install("MsBackendMzSpecLib")
+```
+
+# General information on the mzSpecLib format
+
+The mzSpecLib format is a community standard of the HUPO-PSI organization for
+storing mass spectral libraries. mzSpecLib defines a controlled vocabulary
+(CV)-based data model that combines the spectra, metadata (library, spectrum,
+analyte, interpretation and peak level) and peak annotations in a single,
+extensible format. It supports consensus and predicted spectra, unidentified
+spectra grouped in clusters, and spectra with multiple analytes or alternative
+interpretations. The data model can be stored in different, inter-convertible
+serializations; the specification describes a human-readable plain text format
+(`.mzSpecLib.txt`) and a JSON format (`.mzSpecLib.json`).
+More information is available at <http://psidev.info/mzSpecLib>.
+
+# Accessing data from mzSpecLib files
+
+The `r Biocpkg("MsBackendMzSpecLib")` package adds support for mzSpecLib
+files to `Spectra`-based analysis workflows. Currently the package support only
+the *plain text format*, the support to JSON format will be added in th next
+versions.
+
+```{r load-library, message = FALSE}
+library(MsBackendMzSpecLib)
+```
+
+We next load the one of the official mzSpecLib example file which is bundled
+within this package using the `Spectra()` constructor function specifying to
+use a `MsBackendMzSpecLib` as data backend with parameter `source`.
+Other example files can be downloaded from
+[mzSpecLib](https://github.com/HUPO-PSI/mzSpecLib).
+
+```{r initialize}
+## Get the path/file name of the example file
+fl <- system.file("examples", "fetal_brain_tiny.mzspeclib.txt",
+                    package = "MsBackendMzSpecLib")
+
+library(Spectra)
+sps <- Spectra(fl, source = MsBackendMzSpecLib())
+sps
+```
+
+We thus have access to all possible spectra variables within a file:
+
+```{r spectra-variables}
+spectraVariables(sps)
+```
+
+And the full data for spectra variables can be retrieved with `spectraData`:
+
+```{r full-spectra-data}
+all <- spectraData(sps)
+all
+```
+
+The data is organized by individual spectra with a unique integer id. It
+is saved in `scanIndex` which identifies each spectrum uniquely within the same
+file:
+
+```{r scanIndex}
+sps$scanIndex
+```
+
+Other than the default `"mz"` and `"intensity"` columns, the full peaks data
+can have many more columns, if present, the third one is the `"annotation"`
+column, from the fourth can be the personalized ones. The available columns can
+be listed using:
+
+```{r peaks-variables}
+peaksVariables(sps)
+```
+
+To retrieved the full peaks data we use `peaksData`:
+
+```{r peaks-data}
+## Request all supported peaks variables
+pd <- peaksData(sps, peaksVariables(sps))
+## Show the head data for the spectrum number 10
+head(pd[[10L]])
+```
+
+Below we plot the first 4 spectra.
+
+```{r plot-spectra-frame}
+plotSpectra(sps[1:4])
+```
+
+
+# Session information
+
+```{r session-information}
+sessionInfo()
+```

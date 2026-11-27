@@ -1,6 +1,6 @@
 Package: MsBackendMzSpecLib
 Title: MS Data Backend for mzSpecLib Data Files
-Version: 0.97.3
+Version: 0.97.4
 Authors@R:
     c(person(given = "Gabriele", family = "Tomè",
              email = "gabriele.tome@eurac.edu",
@@ -19,13 +19,15 @@ Description: The HUPO-PSI mzSpecLib format is a standardized file format to
              backends enabling import and export of these files to and from
              Spectra objects.
 Depends:
-    R (>= 4.6.0)
+    R (>= 4.6.0),
+    Spectra (>= 1.5.17)
 Imports:
     MetaboCoreUtils (>= 1.21.2),
-    Spectra,
     data.table,
     methods,
     BiocParallel,
+    MsCoreUtils,
+    ProtGenerics,
     readr,
     stringr,
     dplyr,
@@ -33,9 +35,12 @@ Imports:
     S4Vectors
 Suggests:
     testthat,
-    callr
+    callr,
+    BiocStyle,
+    knitr
 License: Artistic-2.0
 Encoding: UTF-8
+VignetteBuilder: knitr
 BugReports: https://github.com/RforMassSpectrometry/MsBackendMzSpecLib/issues
 URL: https://github.com/RforMassSpectrometry/MsBackendMzSpecLib
 biocViews: Infrastructure, MassSpectrometry, Metabolomics, DataImport, Proteomics

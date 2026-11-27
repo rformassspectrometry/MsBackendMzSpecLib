@@ -404,6 +404,39 @@ MsBackendMzSpecLib <- function() {
     peaks_data
 }
 
+#' Subset the `MsBackendMzSpecLib` by index `i`.
+#'
+#' `@index` slot is subset and ordered according to `i`.
+#' `@fileNames` is only subset but **not** re-ordered!
+#'
+#' @param x `MsBackendMzSpecLib`
+#'
+#' @param i `integer` vector with the **same** length than `x`.
+#'
+#' @return subset `MsBackendMzSpecLib`.
+#'
+#' @author Gabriele Tomè
+#'
+#' @noRd
+.subset_backend <- function(x, i) {
+    idx <- x@index
+    idx$sort_id <- seq_len(nrow(idx))
+    sub_idx <- idx[grepl("^<Spectrum", idx$tag), ][i, , drop = FALSE]
+    if (all(is.na(sub_idx)))
+        stop("subscript out of bounds")
+
+    sub_idx$sort_id <- sort(sub_idx$sort_id)
+    sub_meta <- idx[!grepl("^<Spectrum", idx$tag) &
+                    idx$file %in% unique(sub_idx$file), ]
+    sub_merge <- rbind(sub_meta, sub_idx)
+    sub_merge <- sub_merge[order(sub_merge$sort_id), ]
+    sub_merge$sort_id <- NULL
+
+    slot(x, "index", check = FALSE) <- sub_merge
+    slot(x, "fileNames", check = FALSE) <- x@fileNames[unique(x@index$file)]
+    x
+}
+
 ## GLOBAL VARIABLES ------------------------------------------------------------
 
 #' @title Regex to parse the the files

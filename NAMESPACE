@@ -3,13 +3,9 @@
 export(MsBackendMzSpecLib)
 export(spectraVariableFromCvTerm)
 export(spectraVariableToCvTerm)
-exportMethods(backendInitialize)
+exportClasses(MsBackendMzSpecLib)
 exportMethods(length)
-exportMethods(peaksData)
-exportMethods(peaksVariables)
-exportMethods(spectraData)
 exportMethods(spectraVariableMapping)
-exportMethods(spectraVariables)
 importClassesFrom(Spectra,MsBackendCached)
 importFrom(BiocParallel,
   bplapply,
@@ -20,11 +16,13 @@ importFrom(MetaboCoreUtils,
   nameMapping,
   translate
 )
+importFrom(MsCoreUtils,i2index)
 importFrom(S4Vectors,DataFrame)
 importFrom(Spectra,rbindlistWithRownames)
 importFrom(data.table,rbindlist)
 importFrom(dplyr,left_join)
 importFrom(methods,
+  "slot<-",
   as,
   callNextMethod,
   new,
@@ -42,7 +40,9 @@ importFrom(stats,
 )
 importFrom(stringr,str_match)
 importFrom(utils,read.delim2)
+importMethodsFrom(ProtGenerics,extractByIndex)
 importMethodsFrom(Spectra,backendInitialize)
+importMethodsFrom(Spectra,dataStorage)
 importMethodsFrom(Spectra,peaksData)
 importMethodsFrom(Spectra,peaksVariables)
 importMethodsFrom(Spectra,spectraData)
